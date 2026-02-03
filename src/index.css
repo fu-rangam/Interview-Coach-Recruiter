@@ -1,0 +1,124 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    :root {
+        /* =========================
+       Neutral foundation
+       ========================= */
+
+        --background: 210 20% 98%;
+        /* near-white cool neutral */
+        --foreground: 222 47% 11%;
+        /* deep slate ink */
+
+        --card: 0 0% 100%;
+        /* pure white surface */
+        --card-foreground: 222 47% 11%;
+        /* deep slate ink */
+
+        --popover: 0 0% 100%;
+        /* overlay surface */
+        --popover-foreground: 222 47% 11%;
+        /* overlay text */
+
+        --muted: 210 20% 96%;
+        /* subtle neutral fill */
+        --muted-foreground: 215 16% 47%;
+        /* mid-slate (labels, hints) */
+
+        --border: 214 32% 91%;
+        /* light border */
+        --input: 214 32% 91%;
+        /* input border */
+
+        /* =========================
+       Brandless semantic actions
+       ========================= */
+
+        --primary: 210 90% 45%;
+        /* calm authority blue */
+        --primary-foreground: 0 0% 100%;
+        /* white text */
+
+        --secondary: 210 20% 96%;
+        /* quiet secondary fill */
+        --secondary-foreground: 222 47% 11%;
+        /* ink text */
+
+        --accent: 160 60% 36%;
+        /* growth teal/green */
+        --accent-foreground: 0 0% 100%;
+        /* white text */
+
+        --destructive: 0 84% 60%;
+        /* clear red */
+        --destructive-foreground: 0 0% 100%;
+        /* white text */
+
+        --ring: 210 90% 45%;
+        /* focus ring */
+
+        /* Extension tokens */
+        --success: 160 60% 36%;
+        --success-foreground: 0 0% 100%;
+
+        --warning: 38 92% 50%;
+        --warning-foreground: 222 47% 11%;
+
+        /* Radii + Shadows */
+        --radius: 0.5rem;
+        /* 8px by default, overrides to 16px if desired */
+
+        --shadow-sm: 0 2px 10px hsl(222 47% 11% / 0.06);
+        --shadow-md: 0 8px 24px hsl(222 47% 11% / 0.10);
+    }
+
+    .dark {
+        --background: 222 47% 7%;
+        --foreground: 210 20% 98%;
+
+        --card: 222 47% 9%;
+        --card-foreground: 210 20% 98%;
+
+        --popover: 222 47% 9%;
+        --popover-foreground: 210 20% 98%;
+
+        --muted: 222 30% 14%;
+        --muted-foreground: 215 16% 70%;
+
+        --border: 222 30% 18%;
+        --input: 222 30% 18%;
+
+        --primary: 210 90% 55%;
+        --primary-foreground: 222 47% 7%;
+
+        --secondary: 222 30% 14%;
+        --secondary-foreground: 210 20% 98%;
+
+        --accent: 160 60% 40%;
+        --accent-foreground: 222 47% 7%;
+
+        --destructive: 0 84% 60%;
+        --destructive-foreground: 0 0% 100%;
+
+        --ring: 210 90% 55%;
+
+        --success: 160 60% 40%;
+        --success-foreground: 222 47% 7%;
+
+        --warning: 38 92% 55%;
+        --warning-foreground: 222 47% 7%;
+    }
+}
+
+@layer base {
+    * {
+        @apply border-border;
+    }
+
+    body {
+        @apply bg-background text-foreground;
+    }
+}

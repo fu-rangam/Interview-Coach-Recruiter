@@ -40,6 +40,26 @@ All project documentation lives in the `/docs` folder:
 | AI | Google Gemini 2.5 Flash |
 | Auth | Supabase Auth |
 | Hosting | Vercel |
+
+## Directory Structure
+
+```text
+/
+├── app/                  # Next.js App Router
+│   ├── (candidate)/      # Candidate-facing routes
+│   ├── (recruiter)/      # Recruiter-facing routes
+│   └── api/              # API Routes
+├── docs/                 # Documentation
+├── lib/                  # Shared Business Logic & Utilities
+│   ├── ai/               # AI Service Integration
+│   ├── client/           # Client-side utilities
+│   ├── db/               # Database access / repositories
+│   ├── domain/           # Core Domain Logic (Framework Agnostic)
+│   ├── security/         # Security & Auth utils
+│   ├── server/           # Server-side utilities
+│   └── stream/           # Streaming utilities
+└── openspec/             # OpenSpec artifacts
+```
  
 ## Development
  
