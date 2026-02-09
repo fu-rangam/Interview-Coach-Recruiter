@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { createBrowserClient } from "@supabase/ssr";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Copy, ChevronRight, ChevronLeft, Check, Plus, Trash2, Loader2, Send } from "lucide-react";
+import { ChevronRight, ChevronLeft, Check, Plus, Trash2, Loader2, Send } from "lucide-react";
 
 // --- Types ---
 
@@ -43,33 +44,7 @@ const PERMA_TEMPLATE: QuestionInput[] = [
     { id: 'acc', text: '', category: 'PERMA', label: 'Accomplishment', isLocked: true },
 ];
 
-function CopyButton({ text }: { text: string }) {
-    const [copied, setCopied] = useState(false);
 
-    const handleCopy = () => {
-        navigator.clipboard.writeText(text);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-    };
-
-    return (
-        <Button
-            size="icon"
-            variant="outline"
-            onClick={handleCopy}
-            className={`transition-all duration-300 transform ${copied
-                ? 'bg-green-100 border-green-500 text-green-700 scale-110 shadow-md rotate-3'
-                : 'bg-white bg-muted/50 hover:bg-slate-100 hover:text-slate-900 active:scale-95'
-                }`}
-        >
-            {copied ? (
-                <Check className="w-5 h-5 animate-in zoom-in spin-in-45 duration-300" />
-            ) : (
-                <Copy className="w-4 h-4 transition-transform duration-300 hover:scale-110" />
-            )}
-        </Button>
-    );
-}
 
 export default function CreateInviteWizard() {
     const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
@@ -97,20 +72,13 @@ export default function CreateInviteWizard() {
         }]);
     };
 
-    const addOther = () => {
-        setOther([...other, {
-            id: `other-${Date.now()}`,
-            text: '',
-            category: 'Other',
-            label: `Other Q${other.length + 1}`
-        }]);
-    };
 
-    const removeQuestion = (set: Function, list: QuestionInput[], id: string) => {
+
+    const removeQuestion = (set: (val: QuestionInput[]) => void, list: QuestionInput[], id: string) => {
         set(list.filter(q => q.id !== id));
     };
 
-    const updateQuestion = (set: Function, list: QuestionInput[], id: string, text: string) => {
+    const updateQuestion = (set: (val: QuestionInput[]) => void, list: QuestionInput[], id: string, text: string) => {
         set(list.map(q => q.id === id ? { ...q, text } : q));
     };
 
@@ -137,12 +105,12 @@ export default function CreateInviteWizard() {
     });
 
     // Fetch Recruiter Profile
-    const supabase = createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-
     useEffect(() => {
+        const supabase = createBrowserClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+        );
+
         const fetchProfile = async () => {
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
@@ -244,9 +212,10 @@ export default function CreateInviteWizard() {
                 initializeEmailDraft(); // Init draft with details
                 setStep(4);
             }
-        } catch (e: any) {
+        } catch (e: unknown) {
             console.error(e);
-            setError(e.message || "Failed to create invite");
+            const message = e instanceof Error ? e.message : "Failed to create invite";
+            setError(message);
         } finally {
             setIsLoading(false);
         }
@@ -647,9 +616,11 @@ export default function CreateInviteWizard() {
                             {/* Logo */}
                             <div className="py-2">
                                 {/* User provided logo */}
-                                <img
+                                <Image
                                     src="/rangam-logo.webp"
                                     alt="Rangam"
+                                    width={120}
+                                    height={48}
                                     className="h-12 w-auto object-contain"
                                 />
                             </div>
@@ -693,7 +664,7 @@ export default function CreateInviteWizard() {
                     <div className="flex w-full">
                         {[1, 2, 3, 4].map(s => (
                             <div key={s} className={`flex-1 flex flex-col items-center group cursor-pointer ${s < step ? 'text-emerald-600' : (s === step ? 'text-primary' : 'text-muted-foreground')}`}
-                                onClick={() => s < step ? setStep(s as any) : null}>
+                                onClick={() => s < step ? setStep(s as 1 | 2 | 3 | 4) : null}>
                                 <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 mb-2 transition-colors duration-200
                                      ${s < step ? 'border-emerald-600 bg-slate-50 text-emerald-600' :
                                         s === step ? 'border-primary bg-primary text-primary-foreground shadow-[0_0_0_4px_hsl(var(--primary)/0.2)]' :

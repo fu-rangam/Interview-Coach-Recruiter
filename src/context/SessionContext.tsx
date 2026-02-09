@@ -51,6 +51,7 @@ export interface SessionContextType {
     isEngagementWindowOpen: boolean;
     engagementWindowTimeRemaining: number;
     clearDebugEvents: () => void;
+    createNewSession: (role: string) => Promise<void>;
 }
 
 export const SessionContext = createContext<SessionContextType | undefined>(undefined);
@@ -179,7 +180,8 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
         engagementDebugEvents: tracker.debugEvents,
         isEngagementWindowOpen: tracker.isWindowOpen,
         engagementWindowTimeRemaining: tracker.windowTimeRemaining,
-        clearDebugEvents: tracker.clearDebugEvents
+        clearDebugEvents: tracker.clearDebugEvents,
+        createNewSession: actions.init
     };
 
     return (

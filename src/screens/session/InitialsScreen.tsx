@@ -55,7 +55,7 @@ export default function InitialsScreen() {
                 {/* 3. Introductory Copy & 4. Reassurance */}
                 <div className="space-y-6 text-lg text-muted-foreground leading-relaxed text-left">
                     <p>
-                        You’ll be asked a series of interview-style questions related to a role you applied for.
+                        You&rsquo;ll be asked a series of interview-style questions related to a role you applied for.
                         Your progress is saved automatically, and you can leave and return at any time using
                         this link.
                     </p>

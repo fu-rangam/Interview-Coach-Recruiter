@@ -35,7 +35,7 @@ export default async function CandidateSessionPage({ params }: PageProps) {
 }
 
 // Metadata for nice sharing
-export async function generateMetadata({ params }: PageProps) {
+export async function generateMetadata() {
     return {
         title: "Your Interview Session",
         description: "Join your personalized AI interview practice session."

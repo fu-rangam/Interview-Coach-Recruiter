@@ -4,7 +4,7 @@ import { useSession } from "@/context/SessionContext";
 import InitialsScreen from "@/screens/session/InitialsScreen";
 import LandingScreen from "@/screens/session/LandingScreen";
 import ActiveQuestionScreen from "@/screens/session/ActiveQuestionScreen";
-import PendingEvaluationScreen from "@/screens/session/PendingEvaluationScreen";
+
 import ReviewFeedbackScreen from "@/screens/session/ReviewFeedbackScreen";
 import SummaryScreen from "@/screens/session/SummaryScreen";
 import ErrorScreen from "@/screens/session/ErrorScreen";
@@ -58,13 +58,8 @@ export default function SessionOrchestrator() {
         );
     }
 
-    if (now.status === "AWAITING_EVALUATION") return <PendingEvaluationScreen />;
-
-    if (now.status === "REVIEWING") {
-        if (!currentQ) return <ErrorScreen />;
-        return (
-            <ReviewFeedbackScreen />
-        );
+    if (now.status === "AWAITING_EVALUATION" || now.status === "REVIEWING") {
+        return <ReviewFeedbackScreen />;
     }
 
     if (now.status === "COMPLETED") return <SummaryScreen />;

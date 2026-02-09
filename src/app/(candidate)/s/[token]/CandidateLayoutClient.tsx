@@ -1,9 +1,9 @@
 "use client";
 
-import { RecruiterSidebar } from '@/components/layout/RecruiterSidebar';
+
 import { CandidateSidebar } from '@/components/layout/CandidateSidebar';
 import { SessionProvider, useSession } from '@/context/SessionContext';
-import { InterviewSession } from '@/lib/domain/types';
+
 
 // Internal component to consume context
 function CandidateLayoutContent({ children }: { children: React.ReactNode }) {

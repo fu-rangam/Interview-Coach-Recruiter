@@ -1,13 +1,13 @@
-import { useEffect, useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { useSession } from "@/context/SessionContext"
-import { ChevronDown, ChevronRight, CheckCircle2, AlertCircle, ArrowRight } from "lucide-react"
-import { cn } from "@/lib/cn"
+import { ChevronDown, ChevronRight, CheckCircle2, AlertCircle, ArrowRight, CheckCircle } from "lucide-react"
+
 // Ensure you import the CSS in layout or here (Global CSS preferred usually, but simple import works if configured)
 import "@/styles/loader.css"
 
 export default function ReviewFeedbackScreen() {
-    const { session, nextQuestion, retryQuestion, updateSession } = useSession(); // Corrected destructuring
+    const { session, nextQuestion, retryQuestion, updateSession, analyzeCurrentQuestion } = useSession(); // Corrected destructuring
     const currentQ = session?.questions[session.currentQuestionIndex];
     // Safe access:
     const answer = currentQ ? session?.answers[currentQ.id] : undefined;
@@ -18,6 +18,39 @@ export default function ReviewFeedbackScreen() {
 
     // If no analysis yet, we show loader
     const isThinking = !analysis || !analysis.primaryFocus;
+
+    // --- Ported Logic from PendingEvaluationScreen ---
+    const hasTriggered = useRef(false);
+    const lastQuestionId = useRef<string | undefined>(undefined);
+
+    useEffect(() => {
+        if (!session) return;
+        const currentQuestionId = session.questions[session.currentQuestionIndex]?.id;
+
+        // Reset trigger if question changes
+        if (currentQuestionId && currentQuestionId !== lastQuestionId.current) {
+            lastQuestionId.current = currentQuestionId;
+            hasTriggered.current = false;
+        }
+
+        // Trigger analysis if needed (and we are in a state that implies waiting)
+        // If we are mounting this screen, typically status is REVIEWING or AWAITING_EVALUATION.
+        // If we don't have analysis, we should trigger it.
+        if (isThinking && !hasTriggered.current) {
+            hasTriggered.current = true;
+            analyzeCurrentQuestion();
+        }
+
+        // Poll for completion in case the initial trigger happened but we are waiting for async result
+        const interval = setInterval(() => {
+            if (isThinking) {
+                analyzeCurrentQuestion();
+            }
+        }, 5000);
+
+        return () => clearInterval(interval);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isThinking]);
 
     if (!session || !currentQ || !answer) return <div className="p-8">No session data.</div>;
 
@@ -48,7 +81,7 @@ export default function ReviewFeedbackScreen() {
                         Your Answer
                     </h2>
                     <p className="text-lg text-slate-800 leading-relaxed font-sans italic opacity-90">
-                        "{answer.transcript}"
+                        &quot;{answer.transcript}&quot;
                     </p>
                 </div>
             </div>
@@ -150,14 +183,18 @@ export default function ReviewFeedbackScreen() {
                                 className="w-full text-lg h-12 shadow-md hover:shadow-lg transition-all bg-blue-600 hover:bg-blue-700"
                                 onClick={nextQuestion}
                             >
-                                Continue to the Next Question <ArrowRight className="ml-2 w-5 h-5" />
+                                {session.currentQuestionIndex >= session.questions.length - 1 ? (
+                                    <>Finish Session <CheckCircle className="ml-2 w-5 h-5" /></>
+                                ) : (
+                                    <>Continue to the Next Question <ArrowRight className="ml-2 w-5 h-5" /></>
+                                )}
                             </Button>
 
                             <button
                                 onClick={retryQuestion}
                                 className="text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors py-2"
                             >
-                                I'd like to try my answer again
+                                I&apos;d like to try my answer again
                             </button>
 
                             <button

@@ -327,7 +327,7 @@ export default function ActiveQuestionScreen({
                         <div className="mb-6">
                             <h3 className="text-xs uppercase tracking-wider font-bold text-slate-400 mb-2">Your Answer</h3>
                             <div className="text-lg text-slate-700 italic font-sans leading-relaxed">
-                                "{currentAns.transcript}"
+                                &quot;{currentAns.transcript}&quot;
                             </div>
                         </div>
 

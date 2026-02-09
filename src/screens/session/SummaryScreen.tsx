@@ -3,7 +3,13 @@ import { CheckCircle, RotateCcw } from "lucide-react"
 import { useSession } from "@/context/SessionContext"
 
 export default function SummaryScreen() {
-    const { resetSession } = useSession();
+    const { session, createNewSession } = useSession();
+
+    const handlePracticeAgain = async () => {
+        // Use existing role or default
+        const role = session?.role || "Product Manager";
+        await createNewSession(role);
+    };
 
     return (
         <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 p-6">
@@ -16,12 +22,12 @@ export default function SummaryScreen() {
                 <div className="space-y-2">
                     <h1 className="text-3xl font-bold text-foreground">Session Complete!</h1>
                     <p className="text-muted-foreground">
-                        Great job practicing. You can review your answers and the coach's feedback in your dashboard.
+                        Great job practicing. You can review your answers and the coach&apos;s feedback in your dashboard.
                     </p>
                 </div>
 
                 <div className="pt-4">
-                    <Button size="lg" className="w-full gap-2" variant="outline" onClick={() => resetSession()}>
+                    <Button size="lg" className="w-full gap-2" variant="outline" onClick={handlePracticeAgain}>
                         <RotateCcw className="w-4 h-4" /> Practice Again
                     </Button>
                 </div>

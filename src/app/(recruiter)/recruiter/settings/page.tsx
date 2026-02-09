@@ -5,7 +5,7 @@ import { createBrowserClient } from "@supabase/ssr";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
-import { Loader2, Save, X, RotateCcw } from "lucide-react";
+import { Loader2, Save } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 // --- Types ---
@@ -32,11 +32,11 @@ const getTimezones = () => {
                 const short = new Intl.DateTimeFormat('en-US', { timeZone: zone, timeZoneName: 'shortOffset' }).formatToParts().find(p => p.type === 'timeZoneName')?.value || '';
                 const long = new Intl.DateTimeFormat('en-US', { timeZone: zone, timeZoneName: 'long' }).formatToParts().find(p => p.type === 'timeZoneName')?.value || '';
                 return { value: zone, label: `(${short}) ${long} - ${zone}` };
-            } catch (e) {
+            } catch {
                 return { value: zone, label: zone };
             }
         });
-    } catch (e) {
+    } catch {
         // Fallback for older environments
         return [
             { value: "UTC", label: "UTC" },
@@ -166,9 +166,10 @@ export default function SettingsPage() {
 
             // Clear success message after 3s
             setTimeout(() => setSuccessMessage(null), 3000);
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error(err);
-            setError(err.message || "Failed to save profile.");
+            const message = err instanceof Error ? err.message : "Failed to save profile.";
+            setError(message);
         } finally {
             setIsSaving(false);
         }
