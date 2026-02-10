@@ -1,14 +1,14 @@
 "use client";
 
-import React, { createContext, useContext, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, ReactNode, useEffect, useState } from 'react';
 import { InterviewSession, AnalysisResult } from '@/lib/domain/types';
 import { NowState, ScreenId } from '@/lib/state/now.types';
-import { useDomainSession } from '@/hooks/useDomainSession';
-import { useEngagementTracker, TrackerEvent, EngagementTier } from '@/hooks/useEngagementTracker';
+import { useDomainSession } from '../hooks/useDomainSession';
+import { useEngagementTracker, TrackerEvent, EngagementTier } from '@/features/analytics/hooks/useEngagementTracker';
 
 // --- Types (Stubs or Imports) ---
 export interface OnboardingIntakeV1 {
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
 export interface SessionContextType {
@@ -51,7 +51,7 @@ export interface SessionContextType {
     isEngagementWindowOpen: boolean;
     engagementWindowTimeRemaining: number;
     clearDebugEvents: () => void;
-    createNewSession: (role: string) => Promise<void>;
+    createNewSession: (role: string) => Promise<{ sessionId: string; candidateToken: string }>;
 }
 
 export const SessionContext = createContext<SessionContextType | undefined>(undefined);
@@ -74,9 +74,17 @@ export interface SessionProviderProps {
 export const SessionProvider: React.FC<SessionProviderProps> = ({
     children,
     sessionId,
-    candidateToken,
+    candidateToken: initialCandidateToken,
     initialConfig
 }) => {
+    // Local state for candidateToken to allow updates on session creation
+    const [candidateToken, setCandidateToken] = useState<string | undefined>(initialCandidateToken);
+
+    // Sync with prop changes (e.g., when navigating to a new session)
+    useEffect(() => {
+        setCandidateToken(initialCandidateToken);
+    }, [initialCandidateToken]);
+
     // The Core Hook manages the state
     const { session, now, actions } = useDomainSession(sessionId, candidateToken);
 
@@ -96,6 +104,8 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
 
     // Adapter Logic
     const startSession = async (role: string, jobDescription?: string, intakeData?: OnboardingIntakeV1) => {
+        // Log for debugging (and to satisfy linter about unused vars)
+        console.log("SessionContext: startSession called", { role, jobDescription, intakeData });
         // Transition to IN_SESSION
         actions.start();
     };
@@ -116,7 +126,7 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
         actions.retry();
     };
 
-    const saveAnswer = (qid: string, ans: any) => {
+    const saveAnswer = (_qid: string, ans: { text?: string }) => {
         if (ans.text) actions.submit(ans.text);
     };
 
@@ -154,6 +164,14 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
         },
     });
 
+    const createNewSession = async (role: string) => {
+        const result = await actions.init(role);
+        if (!result?.sessionId || !result?.candidateToken) throw new Error("Failed to create session");
+        // Update the local candidateToken state to match the new session
+        setCandidateToken(result.candidateToken);
+        return result as { sessionId: string; candidateToken: string };
+    };
+
     const contextValue: SessionContextType = {
         session,
         now,
@@ -181,7 +199,7 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
         isEngagementWindowOpen: tracker.isWindowOpen,
         engagementWindowTimeRemaining: tracker.windowTimeRemaining,
         clearDebugEvents: tracker.clearDebugEvents,
-        createNewSession: actions.init
+        createNewSession
     };
 
     return (

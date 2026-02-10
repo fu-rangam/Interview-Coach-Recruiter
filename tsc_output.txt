@@ -1,0 +1,4 @@
+src/app/api/session/[session_id]/questions/[question_id]/analysis/route.ts(51,33): error TS2345: Argument of type '{ status: string; answers: { [x: string]: Answer | { analysis: AnalysisResult; questionId: string; transcript?: string; audioUrl?: string; submittedAt?: number; draft?: string; }; }; ... 10 more ...; engagedTimeSeconds?: number; }' is not assignable to parameter of type 'InterviewSession'.
+  Types of property 'status' are incompatible.
+    Type 'string' is not assignable to type 'SessionStatus'.
+src/features/session/components/index.ts(4,15): error TS2307: Cannot find module './PendingEvaluationScreen' or its corresponding type declarations.

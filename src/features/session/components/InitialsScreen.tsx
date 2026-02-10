@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui/button';
-import { useSession } from '@/context/SessionContext';
+import { useSession } from '../context/SessionContext';
 
 export default function InitialsScreen() {
     const { session, submitInitials } = useSession();
@@ -41,8 +42,14 @@ export default function InitialsScreen() {
             >
                 {/* 1. Logo Area */}
                 <div className="flex justify-between items-center">
-                    <img src="/TA-logo.svg" alt="TalentArbor" className="h-24 w-auto object-contain" />
-                    <img src="/rangam-logo.webp" alt="Rangam" className="h-12 w-auto object-contain" />
+                    <Image
+                        src="/rangam-logo.webp"
+                        alt="Rangam"
+                        width={200}
+                        height={48}
+                        className="h-12 w-auto object-contain"
+                        priority
+                    />
                 </div>
 
                 {/* 2. Primary Heading */}

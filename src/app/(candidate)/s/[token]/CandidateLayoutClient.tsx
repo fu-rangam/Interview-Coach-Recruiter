@@ -2,7 +2,7 @@
 
 
 import { CandidateSidebar } from '@/components/layout/CandidateSidebar';
-import { SessionProvider, useSession } from '@/context/SessionContext';
+import { SessionProvider, useSession } from '@/features/session/context/SessionContext';
 
 
 // Internal component to consume context

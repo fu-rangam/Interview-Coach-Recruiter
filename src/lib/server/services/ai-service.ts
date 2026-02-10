@@ -1,9 +1,10 @@
 import { GoogleGenAI } from "@google/genai";
 import { Question, Blueprint, AnalysisResult } from "@/lib/domain/types";
 import { buildAnalysisContext } from "@/lib/ai/prompts";
+import { Logger } from "@/lib/logger";
 
 const apiKey = process.env.GEMINI_API_KEY;
-console.log("[AIService] API Key Present?", !!apiKey, "Length:", apiKey?.length);
+Logger.info("[AIService] API Key Check", { present: !!apiKey, length: apiKey?.length });
 const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
 export class AIService {
@@ -101,7 +102,7 @@ OUTPUT REQUIREMENTS:
 
         // Mock Fallback
         if (!ai) {
-            console.warn("AI Service: No API Key, returning mock analysis V2.");
+            Logger.warn("AI Service: No API Key, returning mock analysis V2.");
             await new Promise(r => setTimeout(r, 1500));
             return {
                 ack: "I see you're focusing on a specific project challenge.",
@@ -176,7 +177,7 @@ OUTPUT REQUIREMENTS:
             };
 
         } catch (error) {
-            console.error("AI Analysis Failed", error);
+            Logger.error("AI Analysis Failed", error);
             // Fallback V2
             return {
                 ack: "I noted your answer.",

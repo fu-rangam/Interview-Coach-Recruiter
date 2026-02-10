@@ -2,12 +2,12 @@ import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Question } from "@/lib/domain/types"
 import { AnimatePresence, motion } from "framer-motion"
-import { useSpeechToText } from "@/hooks/audio/useSpeechToText";
-import { useAudioRecording } from "@/hooks/audio/useAudioRecording";
-import { useTextToSpeech } from "@/hooks/audio/useTextToSpeech";
-import AudioVisualizer from "@/components/audio/AudioVisualizer";
+import { useSpeechToText } from "@/features/audio/hooks/useSpeechToText";
+import { useAudioRecording } from "@/features/audio/hooks/useAudioRecording";
+import { useTextToSpeech } from "@/features/audio/hooks/useTextToSpeech";
+import AudioVisualizer from "@/features/audio/components/AudioVisualizer";
 import { Mic, Lightbulb, Volume2, StopCircle, Loader2, X, ArrowRight, Keyboard } from "lucide-react"
-import { useSession } from "@/context/SessionContext"
+import { useSession } from "../context/SessionContext"
 import { EngagementDebugOverlay } from "@/components/debug/EngagementDebugOverlay"
 import { cn } from "@/lib/cn"
 
@@ -80,16 +80,12 @@ export default function ActiveQuestionScreen({
         isLoading: isTTSLoading
     } = useTextToSpeech();
 
-    // Sync transcripts logic
-    useEffect(() => {
-        if (transcript) {
-            setAnswer(prev => { // eslint-disable-line @typescript-eslint/no-unused-vars
-                // If the user hasn't typed anything manually (or specifically focused text mode?), replace?
-                // For now, let's just use the transcript as the source of truth when listening.
-                return transcript;
-            });
-        }
-    }, [transcript]);
+    // Sync transcripts logic REMOVED to decouple modes
+    // useEffect(() => {
+    //     if (transcript) {
+    //         setAnswer(prev => transcript);
+    //     }
+    // }, [transcript]);
 
     const handleToggleRecording = async () => {
         if (isRecording) {
@@ -143,9 +139,18 @@ export default function ActiveQuestionScreen({
         return () => clearTimeout(timeout);
     }, [answer, onSaveDraft]);
 
-    const handleLocalSubmit = (ans: string) => {
-        trackEvent('tier3', 'submit', 60); // 60s window for feedback reading (Tier 3 opens window)
-        onSubmit(ans);
+    const handleLocalSubmit = () => {
+        const payload = mode === 'voice' ? transcript : answer;
+
+        // Prevent empty submissions
+        if (!payload || payload.trim().length === 0) return;
+
+        trackEvent('tier3', 'submit', 60);
+        onSubmit(payload);
+
+        // Privacy & Cleanup
+        setAnswer("");
+        resetDetailedTranscript();
     };
 
     // --- 2. Hint Content Logic ---
@@ -412,8 +417,9 @@ export default function ActiveQuestionScreen({
                                             {isRecording ? "Listening..." : "Tap the microphone to start recording"}
                                         </p>
                                         <div className="min-h-[60px] flex items-center justify-center">
+                                            {/* Privacy: Do NOT show streaming transcript */}
                                             <p className="text-lg text-slate-700 italic font-sans leading-relaxed line-clamp-3">
-                                                {transcript || answer || (isRecording ? "..." : "")}
+                                                {isRecording ? "Recording in progress..." : ""}
                                             </p>
                                         </div>
                                     </div>
@@ -438,55 +444,62 @@ export default function ActiveQuestionScreen({
                         )}
 
                         {/* Actions Footer */}
-                        <div className="p-4 flex flex-col items-center gap-4 z-30 relative mt-auto">
+                        <div className="p-4 w-full grid grid-cols-3 items-center z-30 relative mt-auto">
+                            {/* Left Spacer */}
+                            <div></div>
 
-                            {/* Next Button */}
-                            {answer.trim().length > 0 && (
-                                <Button
-                                    size="lg"
-                                    onClick={() => handleLocalSubmit(answer)}
-                                    className="w-full sm:w-auto min-w-[200px] bg-blue-600 hover:bg-blue-700 text-white shadow-md transition-all animate-in zoom-in-95 duration-200"
-                                >
-                                    Next <ArrowRight className="ml-2 w-4 h-4" />
-                                </Button>
-                            )}
-
-                            {/* Saving Indicator */}
-                            <div className="h-4">
-                                <span className={cn(
-                                    "text-[10px] uppercase font-bold tracking-widest transition-colors duration-300",
-                                    isSaving ? "text-amber-500" : "opacity-0"
-                                )}>
-                                    {isSaving ? "Saving..." : ""}
-                                </span>
+                            {/* Center: Mode Toggle */}
+                            <div className="flex justify-center">
+                                <div className="flex items-center gap-1 p-1 bg-slate-200/50 rounded-full backdrop-blur-sm">
+                                    <button
+                                        onClick={() => setMode('voice')}
+                                        className={cn(
+                                            "p-2 rounded-full transition-all duration-200",
+                                            mode === 'voice'
+                                                ? "bg-white text-blue-600 shadow-sm scale-110"
+                                                : "text-slate-400 hover:text-slate-600"
+                                        )}
+                                        title="Voice Mode"
+                                    >
+                                        <Mic size={20} />
+                                    </button>
+                                    <button
+                                        onClick={() => setMode('text')}
+                                        className={cn(
+                                            "p-2 rounded-full transition-all duration-200",
+                                            mode === 'text'
+                                                ? "bg-white text-blue-600 shadow-sm scale-110"
+                                                : "text-slate-400 hover:text-slate-600"
+                                        )}
+                                        title="Text Mode"
+                                    >
+                                        <Keyboard size={20} />
+                                    </button>
+                                </div>
                             </div>
 
-                            {/* Mode Toggle */}
-                            <div className="flex items-center gap-1 p-1 bg-slate-200/50 rounded-full backdrop-blur-sm">
-                                <button
-                                    onClick={() => setMode('voice')}
-                                    className={cn(
-                                        "p-2 rounded-full transition-all duration-200",
-                                        mode === 'voice'
-                                            ? "bg-white text-blue-600 shadow-sm scale-110"
-                                            : "text-slate-400 hover:text-slate-600"
-                                    )}
-                                    title="Voice Mode"
-                                >
-                                    <Mic size={20} />
-                                </button>
-                                <button
-                                    onClick={() => setMode('text')}
-                                    className={cn(
-                                        "p-2 rounded-full transition-all duration-200",
-                                        mode === 'text'
-                                            ? "bg-white text-blue-600 shadow-sm scale-110"
-                                            : "text-slate-400 hover:text-slate-600"
-                                    )}
-                                    title="Text Mode"
-                                >
-                                    <Keyboard size={20} />
-                                </button>
+                            {/* Right: Next Button */}
+                            <div className="flex justify-end items-center gap-2">
+                                <div className="h-4 mr-2">
+                                    <span className={cn(
+                                        "text-[10px] uppercase font-bold tracking-widest transition-colors duration-300",
+                                        isSaving ? "text-amber-500" : "opacity-0"
+                                    )}>
+                                        {isSaving ? "Saving..." : ""}
+                                    </span>
+                                </div>
+
+                                {((mode === 'voice' && transcript.length > 0) || (mode === 'text' && answer.trim().length > 0)) ? (
+                                    <Button
+                                        size="lg"
+                                        onClick={() => handleLocalSubmit()}
+                                        className="min-w-[140px] bg-blue-600 hover:bg-blue-700 text-white shadow-md transition-all animate-in zoom-in-95 duration-200"
+                                    >
+                                        Next <ArrowRight className="ml-2 w-4 h-4" />
+                                    </Button>
+                                ) : (
+                                    <div className="w-[140px]" />
+                                )}
                             </div>
                         </div>
                     </div>

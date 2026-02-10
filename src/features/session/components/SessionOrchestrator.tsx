@@ -1,23 +1,24 @@
 "use client";
 
-import { useSession } from "@/context/SessionContext";
-import InitialsScreen from "@/screens/session/InitialsScreen";
-import LandingScreen from "@/screens/session/LandingScreen";
-import ActiveQuestionScreen from "@/screens/session/ActiveQuestionScreen";
+import { useSession } from "../context/SessionContext";
+import InitialsScreen from "./InitialsScreen";
+import LandingScreen from "./LandingScreen";
+import ActiveQuestionScreen from "./ActiveQuestionScreen";
 
-import ReviewFeedbackScreen from "@/screens/session/ReviewFeedbackScreen";
-import SummaryScreen from "@/screens/session/SummaryScreen";
-import ErrorScreen from "@/screens/session/ErrorScreen";
-import LoadingScreen from "@/screens/session/LoadingScreen";
-import IntakeScreen from "@/screens/session/IntakeScreen";
-import SessionSavedScreen from "@/screens/session/SessionSavedScreen";
+import ReviewFeedbackScreen from "./ReviewFeedbackScreen";
+import SummaryScreen from "./SummaryScreen";
+import ErrorScreen from "./ErrorScreen";
+import LoadingScreen from "./LoadingScreen";
+import IntakeScreen from "./IntakeScreen";
+import SessionSavedScreen from "./SessionSavedScreen";
+import { Question } from "@/lib/domain/types";
 
 export default function SessionOrchestrator() {
     const { now, session, startSession, nextQuestion, retryQuestion, goToQuestion, saveAnswer, saveDraft, isLoading, updateSession } = useSession();
 
     // Computed Context for Screens
     // TODO: Improve cleaner selector access either in Context or Hook
-    const currentQ = session?.questions.find(q => q.id === now.currentQuestionId);
+    const currentQ = session?.questions.find((q: Question) => q.id === now.currentQuestionId);
     const currentAns = currentQ && session?.answers ? session.answers[currentQ.id] : undefined;
 
     console.log(`[Orchestrator] Status: ${now.status}, Screen: ${now.screen}, Analysis?: ${!!currentAns?.analysis}`);
@@ -39,7 +40,7 @@ export default function SessionOrchestrator() {
     if (now.status === "IN_SESSION") {
         // New Intake Step
         if (!session?.coachingPreference) {
-            return <IntakeScreen onComplete={(pref: 'tier0' | 'tier1' | 'tier2') => updateSession(session!.id, { coachingPreference: pref })} />;
+            return <IntakeScreen onComplete={async (pref: 'tier0' | 'tier1' | 'tier2') => { await updateSession(session!.id, { coachingPreference: pref }) }} />;
         }
 
         if (!currentQ) return <ErrorScreen />;

@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { useSession } from "@/context/SessionContext";
+import { useSession } from "../context/SessionContext";
 
 export default function SessionSavedScreen() {
     const { updateSession, session } = useSession();

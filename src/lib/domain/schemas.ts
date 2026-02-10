@@ -1,5 +1,105 @@
 import { z } from 'zod';
 
+// --- Domain Entity Schemas ---
+
+export const SessionStatusSchema = z.enum([
+    'NOT_STARTED',
+    'GENERATING_QUESTIONS',
+    'IN_SESSION',
+    'AWAITING_EVALUATION',
+    'REVIEWING',
+    'PAUSED',
+    'COMPLETED',
+    'ERROR',
+]);
+
+export const QuestionTipsSchema = z.object({
+    lookingFor: z.string(),
+    pointsToCover: z.array(z.string()),
+    answerFramework: z.string(),
+    industrySpecifics: z.object({
+        metrics: z.string(),
+        tools: z.string(),
+    }),
+    mistakesToAvoid: z.array(z.string()),
+    proTip: z.string(),
+});
+
+export const QuestionSchema = z.object({
+    id: z.string(),
+    text: z.string(),
+    category: z.string(),
+    framework: z.string().optional(),
+    competencyId: z.string().optional(),
+    difficulty: z.string().optional(),
+    index: z.number(),
+    tips: QuestionTipsSchema.optional(),
+});
+
+export const AnalysisResultSchema = z.object({
+    ack: z.string().optional(),
+    primaryFocus: z.object({
+        dimension: z.enum(['structural_clarity', 'outcome_explicitness', 'specificity_concreteness', 'decision_rationale', 'focus_relevance', 'delivery_control']),
+        headline: z.string(),
+        body: z.string(),
+    }).optional(),
+    whyThisMatters: z.string().optional(),
+    observations: z.array(z.string()).optional(),
+    nextAction: z.object({
+        label: z.string(),
+        actionType: z.enum(['redo_answer', 'next_question', 'practice_example', 'stop_for_now']),
+    }).optional(),
+    meta: z.object({
+        tier: z.union([z.literal(0), z.literal(1), z.literal(2)]),
+        modality: z.enum(['text', 'voice']),
+        signalQuality: z.enum(['insufficient', 'emerging', 'reliable', 'strong']),
+        confidence: z.enum(['low', 'medium', 'high']),
+    }).optional(),
+    transcript: z.string().optional(),
+
+    // Legacy / Optional fields
+    readinessBand: z.enum(['RL1', 'RL2', 'RL3', 'RL4']).optional(),
+    confidence: z.any().optional(),
+    coachReaction: z.string().optional(),
+    strengths: z.array(z.string()).optional(),
+    opportunities: z.array(z.string()).optional(),
+    missingKeyPoints: z.array(z.string()).optional(),
+    answerScore: z.number().optional(),
+    deliveryStatus: z.string().optional(),
+    evidenceExtracts: z.array(z.string()).optional(),
+    biggestUpgrade: z.string().optional(),
+    redoPrompt: z.string().optional(),
+});
+
+export const AnswerSchema = z.object({
+    questionId: z.string(),
+    transcript: z.string().optional(),
+    audioUrl: z.string().optional(),
+    submittedAt: z.number().optional(),
+    analysis: AnalysisResultSchema.optional(),
+    draft: z.string().optional(),
+});
+
+export const InterviewSessionSchema = z.object({
+    id: z.string(),
+    candidateName: z.string().optional(),
+    role: z.string(),
+    jobDescription: z.string().nullish(),
+    status: SessionStatusSchema,
+    questions: z.array(QuestionSchema),
+    currentQuestionIndex: z.number(),
+    answers: z.record(z.string(), AnswerSchema),
+    initialsRequired: z.boolean(),
+    enteredInitials: z.string().optional(),
+    coachingPreference: z.enum(['tier0', 'tier1', 'tier2']).optional(),
+    candidate: z.object({
+        firstName: z.string(),
+        lastName: z.string(),
+        email: z.string(),
+    }).optional(),
+    engagedTimeSeconds: z.number().optional(),
+});
+
 export const IntakeDataSchema = z
     .object({
         confidenceScore: z.number().int().min(1).max(5).optional(),
@@ -18,7 +118,7 @@ export const InitSessionSchema = z.object({
 });
 
 export const UpdateSessionSchema = z.object({
-    status: z.string().optional(),
+    status: SessionStatusSchema.optional(),
     currentQuestionIndex: z.number().int().min(0).optional(),
     role: z.string().min(1).optional(),
     jobDescription: z.string().optional(),

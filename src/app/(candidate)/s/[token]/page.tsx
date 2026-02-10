@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { SupabaseInviteRepository } from "@/lib/server/infrastructure/supabase-invite-repository";
-import InterviewSessionScreen from "@/screens/InterviewSessionScreen";
+import InterviewSessionScreen from "@/features/session/components/InterviewSessionScreen";
 
 interface PageProps {
     params: {
@@ -26,6 +26,7 @@ export default async function CandidateSessionPage({ params }: PageProps) {
     return (
         <InterviewSessionScreen
             sessionId={invite.id}
+            candidateToken={params.token}
             initialConfig={{
                 role: invite.role,
                 jobDescription: invite.jobDescription

@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession } from '@/context/SessionContext';
+import { useSession } from '@/features/session/context/SessionContext';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, ArrowLeft } from 'lucide-react';

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { useSession } from "@/context/SessionContext"
+import { useSession } from "../context/SessionContext"
 import { ChevronDown, ChevronRight, CheckCircle2, AlertCircle, ArrowRight, CheckCircle } from "lucide-react"
 
 // Ensure you import the CSS in layout or here (Global CSS preferred usually, but simple import works if configured)
@@ -34,11 +34,15 @@ export default function ReviewFeedbackScreen() {
         }
 
         // Trigger analysis if needed (and we are in a state that implies waiting)
-        // If we are mounting this screen, typically status is REVIEWING or AWAITING_EVALUATION.
         // If we don't have analysis, we should trigger it.
+        // FIX: If we ALREADY have analysis (and it's not the loader state), DO NOT trigger.
+        // This prevents the "overwrite" glitch where V1 is replaced by V2.
         if (isThinking && !hasTriggered.current) {
             hasTriggered.current = true;
             analyzeCurrentQuestion();
+        } else if (!isThinking) {
+            // We have analysis, mark as done so we don't re-trigger if logic blips
+            hasTriggered.current = true;
         }
 
         // Poll for completion in case the initial trigger happened but we are waiting for async result
@@ -197,12 +201,14 @@ export default function ReviewFeedbackScreen() {
                                 I&apos;d like to try my answer again
                             </button>
 
-                            <button
-                                onClick={handleStop}
-                                className="text-sm font-medium text-slate-400 hover:text-slate-600 transition-colors py-2"
-                            >
-                                Stop for now
-                            </button>
+                            {!session || session.currentQuestionIndex < session.questions.length - 1 && (
+                                <button
+                                    onClick={handleStop}
+                                    className="text-sm font-medium text-slate-400 hover:text-slate-600 transition-colors py-2"
+                                >
+                                    Stop for now
+                                </button>
+                            )}
                         </div>
                     </>
                 )}

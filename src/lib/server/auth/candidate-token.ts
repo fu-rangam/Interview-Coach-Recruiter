@@ -34,3 +34,27 @@ export async function requireCandidateToken(request: Request, sessionId: string)
 
     return { ok: true, status: 200 };
 }
+
+export async function issueCandidateToken(sessionId: string): Promise<string> {
+    const supabase = process.env.SUPABASE_SERVICE_ROLE_KEY ? createAdminClient() : createClient();
+
+    // Generate a random token (simple UUID or random string)
+    const token = crypto.randomUUID();
+    const tokenHash = hashToken(token);
+
+    // Persist
+    const { error } = await supabase
+        .from("candidate_tokens")
+        .insert({
+            session_id: sessionId,
+            token_hash: tokenHash,
+            created_at: new Date().toISOString()
+        });
+
+    if (error) {
+        console.error("Token Issuance Failed", error);
+        throw new Error("Failed to issue token");
+    }
+
+    return token;
+}

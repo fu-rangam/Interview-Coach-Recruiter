@@ -1,4 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
+import { Logger } from "@/lib/logger";
 
 const apiKey = process.env.GEMINI_API_KEY;
 const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
@@ -10,7 +11,7 @@ export class TTSService {
 
         // Limit check
         if (text.length > 800) {
-            console.warn("[TTS] Text truncated to 800 chars");
+            Logger.warn("[TTS] Text truncated to 800 chars");
             text = text.substring(0, 800);
         }
 
@@ -72,7 +73,7 @@ export class TTSService {
             };
 
         } catch (error) {
-            console.error("[TTSService] Error:", error);
+            Logger.error("[TTSService] Error", error);
             throw error;
         }
     }

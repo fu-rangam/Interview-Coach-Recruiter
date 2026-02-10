@@ -3,6 +3,8 @@ import { SupabaseSessionRepository } from "@/lib/server/infrastructure/supabase-
 import { AIService } from "@/lib/server/services/ai-service";
 import { getAnalysisContext } from "@/lib/server/session/orchestrator";
 import { requireCandidateToken } from "@/lib/server/auth/candidate-token";
+import { SessionStatus } from "@/lib/domain/types";
+import { Logger } from "@/lib/logger";
 
 const repository = new SupabaseSessionRepository();
 
@@ -36,9 +38,10 @@ export async function POST(
         }
 
         const analysis = await AIService.analyzeAnswer(context.question, answer.transcript, null);
+
         const updatedSession = {
             ...session,
-            status: "REVIEWING",
+            status: "REVIEWING" as SessionStatus,
             answers: {
                 ...session.answers,
                 [params.question_id]: {
@@ -52,7 +55,7 @@ export async function POST(
 
         return NextResponse.json(updatedSession);
     } catch (error) {
-        console.error("Analysis Trigger Failed:", error);
+        Logger.error("Analysis Trigger Failed", error);
         return NextResponse.json({ error: "Failed to analyze answer" }, { status: 500 });
     }
 }

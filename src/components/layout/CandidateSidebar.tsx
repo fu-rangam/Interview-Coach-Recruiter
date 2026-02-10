@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { cn } from '@/lib/cn';
-import { useSession } from '@/context/SessionContext';
+import { useSession } from '@/features/session/context/SessionContext';
 import { usePathname } from 'next/navigation';
 
 interface CandidateSidebarProps {
@@ -19,11 +19,7 @@ export function CandidateSidebar({ className, onNavigate }: CandidateSidebarProp
 
     const candidateEmail = session?.candidate?.email || "";
 
-    // Helper to check active state
-    const isActive = (path: string) => {
-        // Simple includes check, but can be more specific if needed
-        return pathname?.includes(path);
-    };
+
 
     // Extract token from session or URL (Assuming token context or param is available via context or we assume relative links)
     // Actually, simple hrefs might be tricky if we don't know the token in the sidebar component without parsing URL.

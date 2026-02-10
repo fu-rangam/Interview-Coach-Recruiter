@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { useEngagementTracker } from '@/hooks/useEngagementTracker';
+import { useEngagementTracker } from '@/features/analytics/hooks/useEngagementTracker';
 import { X, Trash2, Activity } from 'lucide-react';
 import { cn } from '@/lib/cn';
 

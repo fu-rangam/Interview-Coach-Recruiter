@@ -1,14 +1,20 @@
 import { Button } from "@/components/ui/button"
 import { CheckCircle, RotateCcw } from "lucide-react"
-import { useSession } from "@/context/SessionContext"
+import { useSession } from "../context/SessionContext"
+
+import { useRouter } from "next/navigation";
 
 export default function SummaryScreen() {
     const { session, createNewSession } = useSession();
+    const router = useRouter();
 
     const handlePracticeAgain = async () => {
         // Use existing role or default
         const role = session?.role || "Product Manager";
-        await createNewSession(role);
+        const result = await createNewSession(role);
+        if (result?.candidateToken) {
+            router.push(`/s/${result.candidateToken}`);
+        }
     };
 
     return (

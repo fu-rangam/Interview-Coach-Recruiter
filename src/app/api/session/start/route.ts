@@ -3,6 +3,7 @@ import { createSession, addQuestions } from "@/lib/server/session/orchestrator";
 import { QuestionService } from "@/lib/server/services/question-service";
 import { SupabaseSessionRepository } from "@/lib/server/infrastructure/supabase-session-repository";
 import { InitSessionSchema } from "@/lib/domain/schemas";
+import { Logger } from "@/lib/logger";
 
 const repository = new SupabaseSessionRepository();
 
@@ -30,10 +31,16 @@ export async function POST(request: Request) {
         // 4. Persistence
         await repository.create(session);
 
-        return NextResponse.json(session);
+        // 5. Auth Token Issuance
+        const { issueCandidateToken } = await import("@/lib/server/auth/candidate-token");
+        const token = await issueCandidateToken(session.id);
+
+        const response = NextResponse.json(session);
+        response.headers.set("x-candidate-token", token);
+        return response;
 
     } catch (error) {
-        console.error("Link Start Error:", error);
+        Logger.error("Link Start Error", error);
         return NextResponse.json(
             { error: "Failed to start session" },
             { status: 500 }

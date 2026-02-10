@@ -40,22 +40,14 @@ export async function PATCH(
         }
         const updates = parseResult.data;
 
+        // Atomic Partial Update
+        await repository.updatePartial(session_id, updates);
+
+        // Fetch Fresh State
         const session = await repository.get(session_id);
         if (!session) return NextResponse.json({ error: "Session not found" }, { status: 404 });
 
-        // Optimization: If only metadata fields are present, use updateMetadata
-        // We define metadata fields as anything NOT 'questions' or 'answers'.
-        const isMetadataUpdate = !('questions' in updates) && !('answers' in updates);
-
-        const updatedSession = { ...session, ...updates };
-
-        if (isMetadataUpdate) {
-            await repository.updateMetadata(session_id, updates);
-        } else {
-            await repository.update(updatedSession);
-        }
-
-        return NextResponse.json(updatedSession);
+        return NextResponse.json(session);
 
     } catch (error) {
         console.error("[API] Session Update PATCH Error:", error);

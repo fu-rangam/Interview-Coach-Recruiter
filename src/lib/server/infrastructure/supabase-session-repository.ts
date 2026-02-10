@@ -1,6 +1,7 @@
 import { SessionRepository } from "@/lib/domain/repository";
 import { InterviewSession, Question, Answer } from "@/lib/domain/types";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { Logger } from "@/lib/logger";
 
 export class SupabaseSessionRepository implements SessionRepository {
     async create(session: InterviewSession): Promise<void> {
@@ -10,7 +11,9 @@ export class SupabaseSessionRepository implements SessionRepository {
     }
 
     async get(id: string): Promise<InterviewSession | null> {
-        const supabase = createClient();
+        // Use Admin Client to ensure we can fetch regardless of RLS,
+        // trusting that the caller (API Route) has performed Auth checks.
+        const supabase = createAdminClient();
 
         // 1. Fetch Session Metadata
         const { data: sData, error: sError } = await supabase
@@ -52,7 +55,7 @@ export class SupabaseSessionRepository implements SessionRepository {
             .eq('session_id', id);
 
         // Map Questions
-        const questions: Question[] = qData.map((q: any) => ({
+        const questions: Question[] = qData.map((q: { question_id: string; question_text: string; question_index: number }) => ({
             id: q.question_id,
             text: q.question_text,
             category: "General", // Default value as DB schema might not have category column yet
@@ -62,9 +65,9 @@ export class SupabaseSessionRepository implements SessionRepository {
 
         // Map Answers
         const answers: Record<string, Answer> = {};
-        aData.forEach((a: any) => {
+        aData.forEach((a: { question_id: string; final_text: string | null; draft_text: string | null; attempt_number: number; submitted_at: string | null }) => {
             // Find analysis
-            const myEval = eData?.find((e: any) => e.question_id === a.question_id && e.attempt_number === a.attempt_number);
+            const myEval = eData?.find((e: { question_id: string; attempt_number: number; evaluation_json: unknown }) => e.question_id === a.question_id && e.attempt_number === a.attempt_number);
 
             answers[a.question_id] = {
                 questionId: a.question_id,
@@ -77,7 +80,7 @@ export class SupabaseSessionRepository implements SessionRepository {
 
         // Initials Logic
         const intake = sData.intake_json || {};
-        console.log(`[SupabaseSessionRepo] Session ${id} Loaded Intake:`, JSON.stringify(intake));
+        Logger.info(`[SupabaseSessionRepo] Session ${id} Loaded Intake:`, intake);
 
         const c = intake.candidate || {};
         const candidateName = (c.firstName && c.lastName)
@@ -88,7 +91,7 @@ export class SupabaseSessionRepository implements SessionRepository {
         // Require initials if candidate name is known but initials not yet entered
         const initialsRequired = !!candidateName && !enteredInitials;
 
-        console.log(`[SupabaseSessionRepo] Initials Calc -> Name: "${candidateName}", Entered: "${enteredInitials}", Required: ${initialsRequired}`);
+        Logger.info(`[SupabaseSessionRepo] Initials Calc`, { candidateName, enteredInitials, initialsRequired });
 
         return {
             id: sData.session_id,
@@ -113,7 +116,7 @@ export class SupabaseSessionRepository implements SessionRepository {
     async update(session: InterviewSession): Promise<void> {
         // Use Admin Client to bypass RLS for Candidate updates
         const hasKey = !!process.env.SUPABASE_SERVICE_ROLE_KEY;
-        console.log(`[SupabaseSessionRepo] Updating Session ${session.id} (Using Admin Client? ${hasKey})`);
+        Logger.info(`[SupabaseSessionRepo] Updating Session ${session.id}`, { usingAdmin: hasKey });
 
         const supabase = createAdminClient();
 
@@ -124,12 +127,13 @@ export class SupabaseSessionRepository implements SessionRepository {
             dbStatus = "IN_SESSION";
         }
 
-        const updates: any = {
+        const updates: Record<string, unknown> = {
             session_id: session.id,
             status: dbStatus,
             current_question_index: session.currentQuestionIndex,
             target_role: session.role,
             job_description: session.jobDescription
+            // candidate_id: session.candidateId // REMOVED: Property does not exist on Domain Type
         };
 
         // Strict Merge of Intake JSON
@@ -140,7 +144,10 @@ export class SupabaseSessionRepository implements SessionRepository {
             .eq('session_id', session.id)
             .single();
 
-        if (fetchError) console.error("Update Fetch Error:", fetchError);
+        // PGRST116 means 0 rows; expected if creating new session
+        if (fetchError && fetchError.code !== 'PGRST116') {
+            Logger.error("Update Fetch Error", fetchError);
+        }
 
         const currentIntake = current?.intake_json || {};
 
@@ -161,7 +168,7 @@ export class SupabaseSessionRepository implements SessionRepository {
             .upsert(updates);
 
         if (sessionError) {
-            console.error("[Repo] Session Update Failed:", sessionError);
+            Logger.error("[Repo] Session Update Failed", sessionError);
             throw new Error(sessionError.message);
         }
 
@@ -175,7 +182,7 @@ export class SupabaseSessionRepository implements SessionRepository {
                 question_text: q.text
             }));
             const { error: qError } = await supabase.from('questions').upsert(qRows);
-            if (qError) console.error("Question Update Error:", qError);
+            if (qError) Logger.error("Question Update Error", qError);
         }
 
         // 3. Upsert Answers & Evals
@@ -206,24 +213,24 @@ export class SupabaseSessionRepository implements SessionRepository {
             const { error: aError } = await supabase
                 .from('answers')
                 .upsert(aRows, { onConflict: 'question_id, attempt_number' });
-            if (aError) console.error("Answer Update Error:", aError);
+            if (aError) Logger.error("Answer Update Error", aError);
         }
 
         if (eRows.length > 0) {
             const { error: eError } = await supabase
                 .from('eval_results')
                 .upsert(eRows, { onConflict: 'question_id, attempt_number' });
-            if (eError) console.error("Eval Update Error:", eError);
+            if (eError) Logger.error("Eval Update Error", eError);
         }
     }
 
-    async updateMetadata(id: string, updates: Partial<InterviewSession>): Promise<void> {
+    async updatePartial(id: string, updates: Partial<InterviewSession>): Promise<void> {
         const supabase = createAdminClient();
-        // console.log(`[SupabaseSessionRepo] updateMetadata ${id}`, Object.keys(updates));
+        // Logger.debug(`[SupabaseSessionRepo] updatePartial ${id}`, Object.keys(updates));
 
-        const dbUpdates: any = {};
+        const dbUpdates: Record<string, unknown> = {};
 
-        // Map top-level fields
+        // 1. Metadata Updates
         if (updates.status) {
             let dbStatus = updates.status;
             if (updates.status === "AWAITING_EVALUATION" || updates.status === "REVIEWING") {
@@ -235,7 +242,7 @@ export class SupabaseSessionRepository implements SessionRepository {
         if (updates.role) dbUpdates.target_role = updates.role;
         if (updates.jobDescription) dbUpdates.job_description = updates.jobDescription;
 
-        // Handle JSON fields (intake_json)
+        // 2. Intake JSON Updates (Partial Merge)
         if (updates.engagedTimeSeconds !== undefined || updates.enteredInitials !== undefined) {
             const { data: current, error: fetchError } = await supabase
                 .from('sessions')
@@ -253,16 +260,68 @@ export class SupabaseSessionRepository implements SessionRepository {
             }
         }
 
-        if (Object.keys(dbUpdates).length === 0) return;
+        if (Object.keys(dbUpdates).length > 0) {
+            const { error } = await supabase
+                .from('sessions')
+                .update(dbUpdates)
+                .eq('session_id', id);
 
-        const { error } = await supabase
-            .from('sessions')
-            .update(dbUpdates)
-            .eq('session_id', id);
+            if (error) {
+                Logger.error("[Repo] Partial Update Failed", error);
+                throw new Error(error.message);
+            }
+        }
 
-        if (error) {
-            console.error("[Repo] Metadata Update Failed:", error);
-            throw new Error(error.message);
+        // 3. Questions Upsert
+        if (updates.questions && updates.questions.length > 0) {
+            const qRows = updates.questions.map((q, idx) => ({
+                question_id: q.id,
+                session_id: id,
+                question_index: idx,
+                question_text: q.text
+            }));
+            const { error: qError } = await supabase.from('questions').upsert(qRows);
+            if (qError) Logger.error("Question Partial Update Error", qError);
+        }
+
+        // 4. Answers & Evals Upsert
+        if (updates.answers) {
+            const aRows = [];
+            const eRows = [];
+
+            for (const [qid, ans] of Object.entries(updates.answers)) {
+                aRows.push({
+                    question_id: qid,
+                    session_id: id,
+                    final_text: ans.transcript,
+                    draft_text: ans.draft,
+                    submitted_at: ans.submittedAt ? new Date(ans.submittedAt).toISOString() : null,
+                    modality: 'text'
+                });
+
+                if (ans.analysis) {
+                    eRows.push({
+                        question_id: qid,
+                        session_id: id,
+                        status: 'COMPLETE',
+                        feedback_json: ans.analysis
+                    });
+                }
+            }
+
+            if (aRows.length > 0) {
+                const { error: aError } = await supabase
+                    .from('answers')
+                    .upsert(aRows, { onConflict: 'question_id, attempt_number' });
+                if (aError) Logger.error("Answer Partial Update Error", aError);
+            }
+
+            if (eRows.length > 0) {
+                const { error: eError } = await supabase
+                    .from('eval_results')
+                    .upsert(eRows, { onConflict: 'question_id, attempt_number' });
+                if (eError) Logger.error("Eval Partial Update Error", eError);
+            }
         }
     }
 
