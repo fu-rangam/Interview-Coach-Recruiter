@@ -195,7 +195,7 @@ export default function ReviewFeedbackScreen() {
                             </Button>
 
                             <button
-                                onClick={retryQuestion}
+                                onClick={() => retryQuestion()}
                                 className="text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors py-2"
                             >
                                 I&apos;d like to try my answer again

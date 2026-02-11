@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+    // Rebuild trigger: 2
     reactStrictMode: true,
     experimental: {
         serverActions: {

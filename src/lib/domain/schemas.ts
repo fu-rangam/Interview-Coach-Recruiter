@@ -78,6 +78,10 @@ export const AnswerSchema = z.object({
     submittedAt: z.number().optional(),
     analysis: AnalysisResultSchema.optional(),
     draft: z.string().optional(),
+    retryContext: z.object({
+        trigger: z.enum(['user', 'coach']),
+        focus: z.string().optional(),
+    }).optional(),
 });
 
 export const InterviewSessionSchema = z.object({
@@ -194,14 +198,7 @@ export const GenerateTipsSchema = z.object({
 
 export const GenerateStrongResponseSchema = z.object({
     question: z.string().min(1, 'Question is required'),
-    tips: z.object({
-        lookingFor: z.string(),
-        pointsToCover: z.array(z.string()),
-        answerFramework: z.string(),
-        industrySpecifics: z.any().optional(),
-        mistakesToAvoid: z.array(z.string()),
-        proTip: z.string(),
-    }),
+    tips: QuestionTipsSchema,
 });
 
 export const GenerateBlueprintSchema = z.object({

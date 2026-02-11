@@ -14,6 +14,8 @@ export function useSessionMutations(
     const now = useMemo(() => selectNow(session), [session]);
     const isBusyRef = useRef(false);
 
+
+
     const init = useCallback(async (role: string) => {
         if (isBusyRef.current) return;
         isBusyRef.current = true;
@@ -45,6 +47,21 @@ export function useSessionMutations(
             isBusyRef.current = false;
         }
     }, [session, candidateToken, setSession]);
+
+    const analyzeCurrentQuestion = useCallback(async () => {
+        if (!session || !now.currentQuestionId) return;
+
+        try {
+            const updated = await ApiClient.post<InterviewSession>(
+                `/api/session/${session.id}/questions/${now.currentQuestionId}/analysis`,
+                {},
+                { token: candidateToken, schema: InterviewSessionSchema }
+            );
+            setSession(updated);
+        } catch (e) {
+            console.error("Analysis trigger failed:", e);
+        }
+    }, [session, now.currentQuestionId, candidateToken, setSession]);
 
     const submit = useCallback(async (answerText: string) => {
         if (!session || !now.currentQuestionId) return;
@@ -82,28 +99,16 @@ export function useSessionMutations(
 
             Logger.info("Submit success", { updatedStatus: updated.status });
             setSession(updated);
+
+            // Trigger Analysis immediately after persistence
+            await analyzeCurrentQuestion();
         } catch (e) {
             Logger.error("Submit failed with exception", e);
             // Ideally rollback logic here
         } finally {
             isBusyRef.current = false;
         }
-    }, [session, now.currentQuestionId, candidateToken, setSession]);
-
-    const analyzeCurrentQuestion = useCallback(async () => {
-        if (!session || !now.currentQuestionId) return;
-
-        try {
-            const updated = await ApiClient.post<InterviewSession>(
-                `/api/session/${session.id}/questions/${now.currentQuestionId}/analysis`,
-                {},
-                { token: candidateToken, schema: InterviewSessionSchema }
-            );
-            setSession(updated);
-        } catch (e) {
-            console.error("Analysis trigger failed:", e);
-        }
-    }, [session, now.currentQuestionId, candidateToken, setSession]);
+    }, [session, now.currentQuestionId, candidateToken, setSession, analyzeCurrentQuestion]);
 
     const submitInitials = useCallback(async (initials: string) => {
         if (!session) return;
@@ -145,9 +150,11 @@ export function useSessionMutations(
         });
 
         const url = `/api/session/${session.id}/questions/${now.currentQuestionId}/answer`;
-        console.log(`[useDomainSession] saveDraft -> PUT ${url}`);
+        // console.log(`[useDomainSession] saveDraft -> PUT ${url}`);
 
-        await ApiClient.put(url, { text, isFinal: false }, { token: candidateToken, schema: InterviewSessionSchema })
+        // We expect { success: true }, not the full session.
+        // Remove schema validation for this call.
+        await ApiClient.put<{ success: boolean }>(url, { text, isFinal: false }, { token: candidateToken })
             .catch(e => console.error("[useDomainSession] saveDraft Error:", e));
     }, [session, now.currentQuestionId, candidateToken, setSession]);
 
@@ -181,17 +188,13 @@ export function useSessionMutations(
         }
     }, [session, candidateToken, setSession]);
 
-    const retry = useCallback(async () => {
+    const retry = useCallback(async (retryContext?: { trigger: 'user' | 'coach'; focus?: string }) => {
         if (!session || !now.currentQuestionId) return;
         const qid = now.currentQuestionId;
 
         // Optimistic
         setSession((prev: InterviewSession | undefined) => {
             if (!prev) return undefined;
-            const qid = now.currentQuestionId;
-            // The now.currentQuestionId logic assumes we are at the question we want to retry?
-            // Actually 'now' is derived from session, so if we are viewing Q1, we retry Q1.
-            if (!qid) return prev;
 
             const currentAns = prev.answers[qid];
             if (!currentAns) return prev;
@@ -204,7 +207,8 @@ export function useSessionMutations(
                     [qid]: {
                         ...currentAns,
                         submittedAt: undefined,
-                        analysis: undefined
+                        analysis: undefined,
+                        retryContext: retryContext // Store context optimistically
                         // transcript (draft) remains
                     }
                 }
@@ -214,7 +218,7 @@ export function useSessionMutations(
         // Server Persist: We need to clear these fields.
         await ApiClient.post(
             `/api/session/${session.id}/questions/${qid}/retry`,
-            {},
+            { retryContext },
             { token: candidateToken, schema: InterviewSessionSchema }
         );
     }, [session, now.currentQuestionId, candidateToken, setSession]);

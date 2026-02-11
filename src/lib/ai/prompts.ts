@@ -3,7 +3,8 @@ import { Question, Blueprint } from "@/lib/domain/types";
 export function buildAnalysisContext(
     question: Question,
     blueprint: Blueprint | undefined,
-    intakeData: any
+    intakeData: any,
+    retryContext?: { trigger: 'user' | 'coach'; focus?: string }
 ): string {
 
     // --- 1. Blueprint Context ---
@@ -22,12 +23,29 @@ Competencies: ${JSON.stringify(blueprint.competencies?.map((c: any) => ({
     }
 
     // --- 2. Reading Level Context ---
-    const readingLevelContext = `
+    const roleTitle = blueprint?.title?.toLowerCase() || '';
+    const isSenior = roleTitle.includes('senior') || roleTitle.includes('lead') || roleTitle.includes('principal') || roleTitle.includes('manager') || roleTitle.includes('director') || roleTitle.includes('vp') || roleTitle.includes('head');
+    const isTechnical = roleTitle.includes('engineer') || roleTitle.includes('developer') || roleTitle.includes('architect') || roleTitle.includes('data');
+
+    let readingLevelContext = `
     READING LEVEL:
     - Keep language clear, professional, but accessible.
     - Avoid excessive corporate jargon.
     - Adopt a supportive, coaching tone.
 `;
+
+    if (!isSenior && !isTechnical) {
+        readingLevelContext += `
+    - CRITICAL: This is an entry-level or non-technical role.
+    - Use simple, plain-spoken language (8th grade reading level).
+    - Avoid abstract concepts; use concrete examples.
+    - Keep sentences short.
+`;
+    } else if (isSenior) {
+        readingLevelContext += `
+    - Adapt tone for a senior candidate: professional, concise, and focusing on strategic impact.
+`;
+    }
 
     // --- 3. Intake / Personalization Context ---
     let struggleContext = '';
@@ -66,7 +84,26 @@ Competencies: ${JSON.stringify(blueprint.competencies?.map((c: any) => ({
     `;
     }
 
-    // --- 4. Assembly ---
+    // --- 4. Retry / Targeted Practice Context ---
+    let retryPrompt = '';
+    if (retryContext) {
+        if (retryContext.trigger === 'coach' && retryContext.focus) {
+            retryPrompt = `
+    TARGETED PRACTICE CONTEXT:
+    - The user is retrying this question specifically to improve: "${retryContext.focus}".
+    - Acknowledge if they improved on this dimension.
+    - If they improved, be encouraging. If not, offer a different way to think about it.
+`;
+        } else {
+            retryPrompt = `
+    RETRY CONTEXT:
+    - The user is voluntarily retrying this question to give a better answer.
+    - Treat this as a fresh attempt but note any significant improvements if obvious.
+`;
+        }
+    }
+
+    // --- 5. Assembly ---
     return `
 You are an expert Interview Coach.
 Your goal is to evaluate the candidate's answer and provide actionable, structured feedback.
@@ -76,6 +113,7 @@ ${struggleContext}
 ${goalContext}
 ${stageContext}
 ${readingLevelContext}
+${retryPrompt}
 
 **Question**: "${question.text}"
 **Category**: ${question.category}

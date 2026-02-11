@@ -35,7 +35,7 @@ export class SupabaseInviteRepository implements InviteRepository {
                 session_id: invite.id,
                 question_index: q.index,
                 question_text: q.text,
-                competencies: { category: q.category }
+                category: q.category
             }));
 
             const { error: qError } = await supabase.from('questions').insert(qRows);
@@ -89,7 +89,6 @@ export class SupabaseInviteRepository implements InviteRepository {
         }
 
         const data = { sessions: sessionData }; // Shim for existing logic below
-        const error = null;
 
         // Skip the original join query
         /* 
@@ -108,7 +107,7 @@ export class SupabaseInviteRepository implements InviteRepository {
         const questions = (qData || []).map((q: any) => ({
             text: q.question_text,
             index: q.question_index,
-            category: q.competencies?.category || "General"
+            category: q.category || q.competencies?.category || "General"
         }));
 
         // Extract candidate from intake_json

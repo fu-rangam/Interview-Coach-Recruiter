@@ -5,7 +5,7 @@ const apiKey = process.env.GEMINI_API_KEY;
 const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
 export class TTSService {
-    static async generateSpeech(text: string): Promise<{ audioBase64: string; mimeType: string }> {
+    static async generateSpeech(text: string): Promise<{ audioData: Buffer; mimeType: string }> {
         if (!ai) throw new Error("Missing GEMINI_API_KEY");
         if (!text) throw new Error("Missing text");
 
@@ -46,12 +46,21 @@ export class TTSService {
 
             const mimeType = part.inlineData.mimeType || 'unknown';
             const base64Audio = part.inlineData.data;
+
+            // SAFETY CHECK: If audio is > 5MB, reject it to prevent OOM
+            if (base64Audio.length > 5 * 1024 * 1024) {
+                console.error("[TTSService] Audio too large:", base64Audio.length);
+                throw new Error("Generated audio is too large");
+            }
+
+            console.error(`[TTSService] Processing audio size: ${base64Audio.length} bytes`);
+
             const audioBuffer = Buffer.from(base64Audio, 'base64');
 
             // Case A: MP3 (send as is)
             if (mimeType === 'audio/mpeg' || mimeType === 'audio/mp3') {
                 return {
-                    audioBase64: base64Audio,
+                    audioData: audioBuffer,
                     mimeType: 'audio/mpeg'
                 };
             }
@@ -60,15 +69,18 @@ export class TTSService {
             if (mimeType.startsWith('audio/L16') || mimeType.startsWith('audio/pcm')) {
                 const wavHeader = createWavHeader(audioBuffer.length);
                 const wavBuffer = Buffer.concat([wavHeader, audioBuffer]);
+                const finalBase64 = wavBuffer.toString('base64');
+                console.error(`[TTSService] Final WAV base64 size: ${finalBase64.length}`);
                 return {
-                    audioBase64: wavBuffer.toString('base64'),
+                    audioData: wavBuffer,
                     mimeType: 'audio/wav'
                 };
             }
 
             // Case C: Fallback
+            Logger.info(`[TTSService] Generated audio size: ${base64Audio.length} bytes`);
             return {
-                audioBase64: base64Audio,
+                audioData: audioBuffer,
                 mimeType: mimeType
             };
 

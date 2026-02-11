@@ -21,28 +21,13 @@ export async function PUT(
         }
 
         const body = await request.json();
+
+
         const { text } = DraftSchema.parse(body);
 
-        const session = await repository.get(params.session_id);
-        if (!session) {
-            return NextResponse.json({ error: "Session not found" }, { status: 404 });
-        }
-
-        // Update the specific answer draft
-        const currentAns = session.answers[params.question_id] || {
-            questionId: params.question_id,
-            transcript: "",
-            draft: "",
-            analysis: undefined
-        };
-
-        session.answers[params.question_id] = {
-            ...currentAns,
-            draft: text,
-            // We don't change submittedAt for drafts
-        };
-
-        await repository.update(session);
+        // ATOMIC DRAFT SAVE (Fixes race condition with Submit/Analyze)
+        // We do NOT fetch the whole session to avoid overwriting status with stale data.
+        await repository.saveDraft(params.session_id, params.question_id, text);
 
         return NextResponse.json({ success: true });
 

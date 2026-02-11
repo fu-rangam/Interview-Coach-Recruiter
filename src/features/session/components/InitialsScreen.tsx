@@ -38,10 +38,10 @@ export default function InitialsScreen() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, ease: 'easeOut' }}
-                className="w-full max-w-xl mx-auto px-6 py-12 md:py-24 space-y-12"
+                className="w-full max-w-xl mx-auto px-6 py-12 md:py-24 space-y-12 flex flex-col min-h-[100dvh]"
             >
                 {/* 1. Logo Area */}
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-center shrink-0">
                     <Image
                         src="/rangam-logo.webp"
                         alt="Rangam"
@@ -67,16 +67,18 @@ export default function InitialsScreen() {
                         this link.
                     </p>
 
-                    <div className="flex items-start gap-3 p-4 bg-primary/5 rounded-xl border border-primary/10 shadow-sm">
+                    <div className="flex items-start gap-3 p-4 bg-muted/50 rounded-xl border border-border/50 shadow-sm">
                         <p className="text-lg text-muted-foreground">
                             This is a practice experience, not a live interview.
                         </p>
                     </div>
-                </div>
 
-                {/* 5. Visibility Statement */}
-                <div className="flex items-center gap-2 text-sm text-muted-foreground justify-start">
-                    <span>The person who shared this link may review your responses to help guide your preparation. Only you can see coaching feedback received during practice.</span>
+                    {/* 5. Visibility Statement - Now same size/color */}
+                    <div className="flex items-start gap-3 p-4">
+                        <p className="text-lg text-muted-foreground">
+                            The person who shared this link may review your responses to help guide your preparation. Only you can see coaching feedback received during practice.
+                        </p>
+                    </div>
                 </div>
 
                 {/* 6. Initials Input */}
@@ -108,24 +110,26 @@ export default function InitialsScreen() {
                     </div>
                 </div>
 
-                {/* 7. Primary CTA */}
-                <div className="pt-4 pb-8">
+                <div className="flex-1" />
+
+                {/* 7. Primary CTA - Anchored Bottom */}
+                <div className="pt-4 pb-8 sticky bottom-0 bg-background/95 backdrop-blur-sm border-t md:border-t-0 md:bg-transparent">
                     <Button
                         onClick={handleBegin}
                         disabled={initials.length === 0 || isStarting}
                         className={cn(
-                            'w-full md:w-auto px-8 py-6 text-lg rounded-xl transition-all duration-200 shadow-sm h-auto',
+                            'w-full py-6 text-lg rounded-xl transition-all duration-200 shadow-sm h-auto',
                             initials.length > 0
                                 ? 'bg-primary hover:bg-primary/90 text-primary-foreground hover:-translate-y-0.5'
                                 : 'bg-muted text-muted-foreground cursor-not-allowed hover:bg-muted'
                         )}
                     >
-                        {isStarting ? 'Starting...' : 'Begin practice'}
+                        {isStarting ? 'Starting...' : 'Continue'}
                     </Button>
                 </div>
 
-                {/* 8. Footer Microcopy */}
-                <div className="text-left pt-8 border-t border-border">
+                {/* 8. Footer Microcopy - Moving below button or keeping? Usually below button is fine but sticky makes it tricky. Let's keep it below button in the scroll flow if sticking. */}
+                <div className="text-left pb-8">
                     <p className="text-sm text-muted-foreground">
                         You can return to this session anytime using the same link.
                     </p>

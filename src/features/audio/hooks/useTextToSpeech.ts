@@ -44,24 +44,15 @@ export const useTextToSpeech = () => {
 
             if (!response.ok) throw new Error('TTS Failed');
 
-            const data = await response.json();
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
 
-            if (data.audioBase64) {
-                const binaryString = atob(data.audioBase64);
-                const bytes = new Uint8Array(binaryString.length);
-                for (let i = 0; i < binaryString.length; i++) {
-                    bytes[i] = binaryString.charCodeAt(i);
-                }
-                const blob = new Blob([bytes], { type: data.mimeType });
-                const url = URL.createObjectURL(blob);
+            setAudioUrl(url);
 
-                setAudioUrl(url);
-
-                if (audioRef.current) {
-                    audioRef.current.src = url;
-                    await audioRef.current.play();
-                    setIsPlaying(true);
-                }
+            if (audioRef.current) {
+                audioRef.current.src = url;
+                await audioRef.current.play();
+                setIsPlaying(true);
             }
         } catch (error) {
             console.error("TTS Error:", error);

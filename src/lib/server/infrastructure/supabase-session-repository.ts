@@ -55,10 +55,10 @@ export class SupabaseSessionRepository implements SessionRepository {
             .eq('session_id', id);
 
         // Map Questions
-        const questions: Question[] = qData.map((q: { question_id: string; question_text: string; question_index: number }) => ({
+        const questions: Question[] = qData.map((q: { question_id: string; question_text: string; question_index: number; category?: string }) => ({
             id: q.question_id,
             text: q.question_text,
-            category: "General", // Default value as DB schema might not have category column yet
+            category: q.category || "General",
             index: q.question_index
             // ... competencies mapping if needed
         }));
@@ -78,9 +78,11 @@ export class SupabaseSessionRepository implements SessionRepository {
             };
         });
 
-        // Initials Logic
+        // Initials & Retry Logic
         const intake = sData.intake_json || {};
-        Logger.info(`[SupabaseSessionRepo] Session ${id} Loaded Intake:`, intake);
+        const retryContexts = intake.retry_contexts || {};
+
+        // Logger.info(`[SupabaseSessionRepo] Session ${id} Loaded Intake:`, intake);
 
         const c = intake.candidate || {};
         const candidateName = (c.firstName && c.lastName)
@@ -91,25 +93,49 @@ export class SupabaseSessionRepository implements SessionRepository {
         // Require initials if candidate name is known but initials not yet entered
         const initialsRequired = !!candidateName && !enteredInitials;
 
-        Logger.info(`[SupabaseSessionRepo] Initials Calc`, { candidateName, enteredInitials, initialsRequired });
+        // Map retry contexts to answers
+        Object.keys(answers).forEach(qid => {
+            if (retryContexts[qid]) {
+                answers[qid].retryContext = retryContexts[qid];
+            }
+        });
+
+        // Logger.info(`[SupabaseSessionRepo] Initials Calc`, { candidateName, enteredInitials, initialsRequired });
+
+        // Derive Status from Answers to fix transient state loss
+        let derivedStatus = sData.status;
+        if (sData.status === 'IN_SESSION') {
+            const currentQ = questions.find(q => q.index === sData.current_question_index);
+            if (currentQ) {
+                const currentAns = answers[currentQ.id];
+                if (currentAns?.submittedAt) {
+                    if (currentAns.analysis) {
+                        derivedStatus = 'REVIEWING';
+                    } else {
+                        derivedStatus = 'AWAITING_EVALUATION';
+                    }
+                }
+            }
+        }
 
         return {
             id: sData.session_id,
-            status: sData.status,
+            status: derivedStatus,
             role: sData.target_role,
             jobDescription: sData.job_description,
             currentQuestionIndex: sData.current_question_index,
             questions,
             answers,
             initialsRequired,
-            candidateName, // Pass to UI for validation
+            candidateName,
             enteredInitials,
             candidate: {
                 firstName: c.firstName || "",
                 lastName: c.lastName || "",
                 email: c.email || ""
             },
-            engagedTimeSeconds: intake.engaged_time_seconds || 0
+            engagedTimeSeconds: intake.engaged_time_seconds || 0,
+            intakeData: intake
         };
     }
 
@@ -157,10 +183,19 @@ export class SupabaseSessionRepository implements SessionRepository {
         // Also persist engagedTimeSeconds
         const nextEngagedTimeSeconds = session.engagedTimeSeconds !== undefined ? session.engagedTimeSeconds : currentIntake.engaged_time_seconds;
 
+        // Collect retry contexts from answers
+        const nextRetryContexts = currentIntake.retry_contexts || {};
+        Object.values(session.answers).forEach(ans => {
+            if (ans.retryContext) {
+                nextRetryContexts[ans.questionId] = ans.retryContext;
+            }
+        });
+
         updates.intake_json = {
             ...currentIntake,
             entered_initials: nextEnteredInitials,
-            engaged_time_seconds: nextEngagedTimeSeconds
+            engaged_time_seconds: nextEngagedTimeSeconds,
+            retry_contexts: nextRetryContexts
         };
 
         const { error: sessionError } = await supabase
@@ -179,7 +214,8 @@ export class SupabaseSessionRepository implements SessionRepository {
                 question_id: q.id,
                 session_id: session.id,
                 question_index: idx,
-                question_text: q.text
+                question_text: q.text,
+                category: q.category
             }));
             const { error: qError } = await supabase.from('questions').upsert(qRows);
             if (qError) Logger.error("Question Update Error", qError);
@@ -243,7 +279,9 @@ export class SupabaseSessionRepository implements SessionRepository {
         if (updates.jobDescription) dbUpdates.job_description = updates.jobDescription;
 
         // 2. Intake JSON Updates (Partial Merge)
-        if (updates.engagedTimeSeconds !== undefined || updates.enteredInitials !== undefined) {
+        const hasAnswerRetryContext = updates.answers && Object.values(updates.answers).some(a => !!a.retryContext);
+
+        if (updates.engagedTimeSeconds !== undefined || updates.enteredInitials !== undefined || hasAnswerRetryContext) {
             const { data: current, error: fetchError } = await supabase
                 .from('sessions')
                 .select('intake_json')
@@ -252,10 +290,22 @@ export class SupabaseSessionRepository implements SessionRepository {
 
             if (!fetchError && current) {
                 const currentIntake = current.intake_json || {};
+                const currentRetryContexts = currentIntake.retry_contexts || {};
+
+                // Merge new retry contexts
+                if (updates.answers) {
+                    Object.values(updates.answers).forEach(ans => {
+                        if (ans.retryContext) {
+                            currentRetryContexts[ans.questionId] = ans.retryContext;
+                        }
+                    });
+                }
+
                 dbUpdates.intake_json = {
                     ...currentIntake,
                     ...(updates.enteredInitials !== undefined && { entered_initials: updates.enteredInitials }),
-                    ...(updates.engagedTimeSeconds !== undefined && { engaged_time_seconds: updates.engagedTimeSeconds })
+                    ...(updates.engagedTimeSeconds !== undefined && { engaged_time_seconds: updates.engagedTimeSeconds }),
+                    retry_contexts: currentRetryContexts
                 };
             }
         }
@@ -278,7 +328,8 @@ export class SupabaseSessionRepository implements SessionRepository {
                 question_id: q.id,
                 session_id: id,
                 question_index: idx,
-                question_text: q.text
+                question_text: q.text,
+                category: q.category
             }));
             const { error: qError } = await supabase.from('questions').upsert(qRows);
             if (qError) Logger.error("Question Partial Update Error", qError);
@@ -326,8 +377,50 @@ export class SupabaseSessionRepository implements SessionRepository {
     }
 
 
+    async saveDraft(sessionId: string, questionId: string, draftText: string): Promise<void> {
+        const supabase = createAdminClient();
+
+        const { data, error } = await supabase
+            .from('answers')
+            .update({ draft_text: draftText })
+            .eq('session_id', sessionId)
+            .eq('question_id', questionId)
+            .select();
+
+        if (error) throw new Error(error.message);
+
+        // If no rows updated, insert.
+        if (!data || data.length === 0) {
+            // Row doesn't exist, insert it
+            const { error: insertError } = await supabase
+                .from('answers')
+                .insert({
+                    session_id: sessionId,
+                    question_id: questionId,
+                    draft_text: draftText,
+                    modality: 'text'
+                });
+
+            if (insertError) Logger.error("[Repo] SaveDraft Insert Failed", insertError);
+        }
+    }
+
+    async deleteAnalysis(sessionId: string, questionId: string): Promise<void> {
+        const supabase = createAdminClient();
+        const { error } = await supabase
+            .from('eval_results')
+            .delete()
+            .eq('session_id', sessionId)
+            .eq('question_id', questionId);
+
+        if (error) {
+            Logger.error("[Repo] Delete Analysis Failed", error);
+        }
+    }
+
     async delete(id: string): Promise<void> {
-        const supabase = createClient();
-        await supabase.from('sessions').delete().eq('session_id', id);
+        // Use createClient directly
+        const supabaseClient = createClient();
+        await supabaseClient.from('sessions').delete().eq('session_id', id);
     }
 }

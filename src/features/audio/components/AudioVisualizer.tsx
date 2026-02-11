@@ -6,108 +6,128 @@ interface AudioVisualizerProps {
     className?: string;
 }
 
+// Singleton for AudioContext to avoid initialization issues
+let sharedAudioContext: AudioContext | null = null;
+
 const AudioVisualizer: React.FC<AudioVisualizerProps> = ({ stream, isRecording, className }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const animationRef = useRef<number | null>(null);
     const analyserRef = useRef<AnalyserNode | null>(null);
-    const contextRef = useRef<AudioContext | null>(null);
+    const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
 
     useEffect(() => {
-        if (!stream || !isRecording || !canvasRef.current) return;
+        // Start only if we have a recording stream
+        if (!isRecording || !stream || !canvasRef.current) return;
 
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
-        if (!contextRef.current) {
-            const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-            contextRef.current = new AudioContextClass();
+        // Initialize Shared Audio Context
+        if (!sharedAudioContext) {
+            const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+            sharedAudioContext = new AudioContextClass();
         }
 
-        const audioContext = contextRef.current;
+        const audioContext = sharedAudioContext;
 
-        // Ensure context is running (browser autoplay policy)
-        if (audioContext.state === 'suspended') {
-            audioContext.resume();
-        }
-
-        // Reuse analyser if possible to avoid recreating nodes improperly
-        if (!analyserRef.current) {
-            const analyser = audioContext.createAnalyser();
-            analyser.fftSize = 256;
-            analyserRef.current = analyser;
-        }
-
-        const analyser = analyserRef.current;
-
-        // Connect source
-        try {
-            const source = audioContext.createMediaStreamSource(stream);
-            source.connect(analyser);
-            // Verify if we need to disconnect later? 
-            // Usually fine for this component lifecycle as we close context on unmount
-        } catch (e) {
-            // Stream might be already connected or invalid
-            console.warn("AudioVisualizer: Error connecting stream", e);
-        }
-
-        const bufferLength = analyser.frequencyBinCount;
-        const dataArray = new Uint8Array(bufferLength);
-
-        const draw = () => {
-            if (!isRecording) return;
-
-            animationRef.current = requestAnimationFrame(draw);
-            analyser.getByteFrequencyData(dataArray);
-
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            const barWidth = (canvas.width / bufferLength) * 2.5;
-            let barHeight;
-            let x = 0;
-
-            for (let i = 0; i < bufferLength; i++) {
-                barHeight = dataArray[i] / 2;
-
-                // Color: Rangam Blue-ish
-                const r = 55;
-                const g = 100;
-                const b = 151;
-
-                // Dynamic opacity based on volume
-                ctx.fillStyle = `rgba(${r},${g},${b}, ${0.5 + barHeight / 200})`;
-
-                ctx.beginPath();
-                // Rounded tops
-                ctx.roundRect(x, canvas.height - barHeight, barWidth, barHeight, 5);
-                ctx.fill();
-
-                x += barWidth + 2;
+        const run = async () => {
+            if (audioContext.state === 'suspended') {
+                await audioContext.resume();
             }
+
+            if (!analyserRef.current) {
+                const analyser = audioContext.createAnalyser();
+                analyser.fftSize = 256;
+                analyser.smoothingTimeConstant = 0.8;
+                analyserRef.current = analyser;
+            }
+
+            const analyser = analyserRef.current;
+
+            // Connect to source
+            try {
+                if (sourceRef.current) sourceRef.current.disconnect();
+                const source = audioContext.createMediaStreamSource(stream);
+                source.connect(analyser);
+                sourceRef.current = source;
+            } catch (e) {
+                console.warn("Visualizer connection error:", e);
+            }
+
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+
+            const draw = () => {
+                if (!isRecording) return;
+                animationRef.current = requestAnimationFrame(draw);
+
+                analyser.getByteFrequencyData(dataArray);
+
+                const dpr = window.devicePixelRatio || 1;
+                const width = canvas.width / dpr;
+                const height = canvas.height / dpr;
+
+                ctx.clearRect(0, 0, width, height);
+
+                const barCount = 14;
+                const barWidth = 4;
+                const barGap = 6;
+                const centerX = width / 2;
+                const centerY = height / 2;
+
+                for (let i = 0; i < barCount; i++) {
+                    const dataIndex = i * 2;
+                    const value = (dataArray[dataIndex] || 0) / 255;
+
+                    // Base height + reactive height
+                    const h = 4 + (value * height * 0.8);
+
+                    ctx.fillStyle = '#3b82f6'; // primary blue
+                    ctx.globalAlpha = 0.4 + (value * 0.6);
+
+                    // Symmetrical drawing
+                    const drawBar = (xPos: number) => {
+                        ctx.beginPath();
+                        if (ctx.roundRect) ctx.roundRect(xPos, centerY - h / 2, barWidth, h, 2);
+                        else ctx.rect(xPos, centerY - h / 2, barWidth, h);
+                        ctx.fill();
+                    };
+
+                    drawBar(centerX + (i * (barWidth + barGap)));
+                    drawBar(centerX - (i * (barWidth + barGap)) - barWidth);
+                }
+            };
+            draw();
         };
 
-        draw();
+        run();
 
         return () => {
             if (animationRef.current) cancelAnimationFrame(animationRef.current);
-            // We do NOT close the context here if we want to reuse it, 
-            // but for this component which might be mounted/unmounted, closing is safer for cleanup
-            if (contextRef.current && contextRef.current.state !== 'closed') {
-                contextRef.current.close().then(() => {
-                    contextRef.current = null;
-                    analyserRef.current = null;
-                });
-            }
+            if (sourceRef.current) sourceRef.current.disconnect();
         };
     }, [stream, isRecording]);
 
+    // Handle high DPI initialization
+    useEffect(() => {
+        const resize = () => {
+            const canvas = canvasRef.current;
+            if (!canvas) return;
+            const dpr = window.devicePixelRatio || 1;
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            const ctx = canvas.getContext('2d');
+            if (ctx) ctx.scale(dpr, dpr);
+        };
+        resize();
+        window.addEventListener('resize', resize);
+        return () => window.removeEventListener('resize', resize);
+    }, []);
+
     return (
-        <canvas
-            ref={canvasRef}
-            width={300}
-            height={100}
-            className={className || 'w-full h-32 rounded-xl bg-transparent'}
-        />
+        <canvas ref={canvasRef} className={className || "w-full h-full"} />
     );
 };
 

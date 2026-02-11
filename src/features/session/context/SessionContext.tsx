@@ -22,7 +22,7 @@ export interface SessionContextType {
     submitInitials: (initials: string) => Promise<void>;
     saveDraft: (text: string) => Promise<void>;
     nextQuestion: () => void;
-    retryQuestion: () => void;
+    retryQuestion: (context?: { trigger: 'user' | 'coach'; focus?: string }) => void;
     goToQuestion: (index: number) => void;
     isLoading: boolean;
 
@@ -122,8 +122,8 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
         actions.next();
     };
 
-    const retryQuestion = () => {
-        actions.retry();
+    const retryQuestion = (context?: { trigger: 'user' | 'coach'; focus?: string }) => {
+        actions.retry(context);
     };
 
     const saveAnswer = (_qid: string, ans: { text?: string }) => {

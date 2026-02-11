@@ -43,6 +43,11 @@ export interface QuestionTips {
     proTip: string;
 }
 
+export interface StrongResponseResult {
+    strongResponse: string;
+    whyThisWorks: QuestionTips;
+}
+
 /**
  * Canonical Answer Entity
  */
@@ -53,6 +58,10 @@ export interface Answer {
     submittedAt?: number;
     analysis?: AnalysisResult;
     draft?: string;
+    retryContext?: {
+        trigger: 'user' | 'coach';
+        focus?: string;
+    };
 }
 
 /**
@@ -124,4 +133,5 @@ export interface InterviewSession {
         email: string;
     };
     engagedTimeSeconds?: number;
+    intakeData?: any; // Full intake JSON for context
 }

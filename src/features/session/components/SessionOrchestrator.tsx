@@ -3,18 +3,17 @@
 import { useSession } from "../context/SessionContext";
 import InitialsScreen from "./InitialsScreen";
 import LandingScreen from "./LandingScreen";
-import ActiveQuestionScreen from "./ActiveQuestionScreen";
-
-import ReviewFeedbackScreen from "./ReviewFeedbackScreen";
+import { UnifiedSessionScreen } from "./UnifiedSessionScreen";
+// import ActiveQuestionScreen from "./ActiveQuestionScreen"; 
+// import ReviewFeedbackScreen from "./ReviewFeedbackScreen";
 import SummaryScreen from "./SummaryScreen";
 import ErrorScreen from "./ErrorScreen";
 import LoadingScreen from "./LoadingScreen";
-import IntakeScreen from "./IntakeScreen";
+// import IntakeScreen from "./IntakeScreen";
 import SessionSavedScreen from "./SessionSavedScreen";
 import { Question } from "@/lib/domain/types";
-
 export default function SessionOrchestrator() {
-    const { now, session, startSession, nextQuestion, retryQuestion, goToQuestion, saveAnswer, saveDraft, isLoading, updateSession } = useSession();
+    const { now, session, startSession, nextQuestion, retryQuestion, goToQuestion, saveAnswer, saveDraft, isLoading /*, updateSession */ } = useSession();
 
     // Computed Context for Screens
     // TODO: Improve cleaner selector access either in Context or Hook
@@ -37,30 +36,15 @@ export default function SessionOrchestrator() {
         return <LandingScreen onStart={handleStart} role={now.role} />;
     }
 
-    if (now.status === "IN_SESSION") {
-        // New Intake Step
+    if (now.status === "IN_SESSION" || now.status === "AWAITING_EVALUATION" || now.status === "REVIEWING") {
+        // Intake Bypass: We default to tier1 if not set, or just proceed.
+        // The IntakeScreen is removed from flow.
         if (!session?.coachingPreference) {
-            return <IntakeScreen onComplete={async (pref: 'tier0' | 'tier1' | 'tier2') => { await updateSession(session!.id, { coachingPreference: pref }) }} />;
+            // Auto-set preference if needed
         }
 
         if (!currentQ) return <ErrorScreen />;
-        return (
-            <ActiveQuestionScreen
-                question={currentQ}
-                currentQuestionIndex={now.currentQuestionIndex}
-                totalQuestions={now.totalQuestions}
-                initialAnswer={currentAns?.transcript || currentAns?.draft || ""}
-                onSaveDraft={saveDraft}
-                onSubmit={handleSubmit}
-                retryQuestion={retryQuestion}
-                goToQuestion={goToQuestion}
-                nextQuestion={nextQuestion}
-            />
-        );
-    }
-
-    if (now.status === "AWAITING_EVALUATION" || now.status === "REVIEWING") {
-        return <ReviewFeedbackScreen />;
+        return <UnifiedSessionScreen />;
     }
 
     if (now.status === "COMPLETED") return <SummaryScreen />;

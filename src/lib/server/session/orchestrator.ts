@@ -89,7 +89,18 @@ export function submitAnswer(
 export function getAnalysisContext(session: InterviewSession, questionId: string) {
     const question = session.questions.find(q => q.id === questionId);
     if (!question) return null;
-    return { question };
+
+    // Construct minimal blueprint from session role
+    const blueprint = {
+        title: session.role,
+        competencies: []
+    };
+
+    return {
+        question,
+        blueprint,
+        intakeData: session.intakeData
+    };
 }
 
 export function submitInitials(session: InterviewSession, initials: string): InterviewSession {

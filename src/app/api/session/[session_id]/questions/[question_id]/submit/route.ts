@@ -46,6 +46,9 @@ export async function POST(
         console.log(`[SubmitAPI] Session Updated (Memory), Status: ${updatedSession.status}`);
 
         // 3. Persist
+        // Ensure we clear any previous analysis (stale feedback bug)
+        await repository.deleteAnalysis(params.session_id, params.question_id);
+
         await repository.update(updatedSession);
         console.log(`[SubmitAPI] Session Persisted to DB`);
 

@@ -19,13 +19,23 @@ export async function POST(
             return NextResponse.json({ error: "Session not found" }, { status: 404 });
         }
 
+        // Parse retryContext from body if present
+        let retryContext;
+        try {
+            const body = await request.json();
+            retryContext = body.retryContext;
+        } catch (e) {
+            // No body or invalid JSON, ignore
+        }
+
         const currentAns = session.answers[params.question_id];
         if (currentAns) {
             // Clear submission state but keep draft
             session.answers[params.question_id] = {
                 ...currentAns,
                 submittedAt: undefined,
-                analysis: undefined
+                analysis: undefined,
+                retryContext: retryContext // Persist context for next analysis
             };
 
             // If we want to be explicit about status, we could force it, 

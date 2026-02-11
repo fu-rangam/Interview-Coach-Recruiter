@@ -13,11 +13,12 @@ export class AIService {
         answerText: string | null,
         audioData: { base64: string; mimeType: string } | null,
         blueprint?: Blueprint,
-        intakeData?: any
+        intakeData?: any,
+        retryContext?: { trigger: 'user' | 'coach'; focus?: string }
     ): Promise<AnalysisResult> {
 
         // 1. Context Construction
-        const contextPrompt = buildAnalysisContext(question, blueprint, intakeData);
+        const contextPrompt = buildAnalysisContext(question, blueprint, intakeData, retryContext);
 
         // 2. Strict JSON System Prompt (V2 Schema)
         const systemPrompt = `SYSTEM:
@@ -27,33 +28,31 @@ You must produce feedback that is coaching, not evaluation.
 NON-NEGOTIABLE RULES:
 - Output MUST be valid JSON only. No prose outside JSON.
 - Never use scores, numbers, rankings, or comparisons to other people.
-- Never say pass/fail, readiness, competitive, hire, reject, or imply screening.
+- Never say pass/fail, readiness, competitive, hire, reject, or imply screening in the text.
 - Never simulate an interviewer’s judgment.
-- Do not mention “signal quality”, “tier”, “confidence weighting”, or “model confidence”.
-- Keep language clear and non-technical.
+- Keep language clear and plain-spoken (match READING LEVEL intent).
 - Use “listener” phrasing rather than “interviewer” phrasing.
 
 STRUCTURE RULES:
-- ack: exactly 1 sentence, observational, no judgment adjectives.
+- ack: EXACTLY 1 sentence. MUST be positive/validating. Focus on a specific strength or good attempt.
 - primaryFocus: EXACTLY ONE focus. It must be a communication lever the user can act on next.
 - whyThisMatters: include ONLY if tier >= 1 AND providedAllowed=true.
-- observations: 0–3 items. Observational only; DO NOT use advice verbs like “try/should/need”.
-- nextAction: EXACTLY ONE action, predictable, neutral, optional-feeling.
+- nextAction: A short, punchy button label (Verb + Noun) for immediate practice. E.g., "Practice structured answers", "Try again with STAR".
+- readinessLevel: Determine RL1, RL2, RL3, or RL4 based on the definitions below.
 
-MODALITY RULES:
-- If modality="voice": you may reference pacing, pausing, clarity of transitions, and emphasis.
-  Never mention posture, eye contact, attire, facial expressions, gestures, accent, or voice quality.
-- If modality="text": you may reference structure, clarity, and placement of outcome statements.
-  Never mention typing speed.
+READINESS LEVEL DEFINITIONS (Internal Logic):
+- RL1 (Ready): Clear, relevant examples; coherent communication; minor refinements only.
+- RL2 (Strong Potential): Good preparation but inconsistent depth; minor confusion/hesitancy; examples present but underdeveloped.
+- RL3 (Practice Recommended): Vague/incomplete answers; difficulty articulating; limited role alignment.
+- RL4 (Incomplete): Answer is too short to judge or irrelevant.
 
-TIER RULES (internal guidance only):
-- Tier 0: communication-only language. Do not reference role expectations or competencies. Omit whyThisMatters unless explicitly allowed and tier>=1 (so normally no).
-- Tier 1: you may explain why the focus helps for this role (role context). Still do not name competencies.
-- Tier 2: you may name ONE relevant competency (if given), but frame it as communication behavior, not evaluation.
+EVIDENCE LOGIC (Internal):
+- Use the "observations" field (internal use only) to list 1-3 specific facts that justify the Readiness Level.
+- Do NOT use advice verbs in observations. Just facts relative to the RL definition.
 
 SAFETY:
 If the input evidence is weak or unclear, use more tentative language and keep feedback minimal.
-If you are uncertain, prefer silence (empty observations array) over invented specifics.`;
+If you are uncertain, prefer silence (empty observations) over invented specifics.`;
 
         const schemaPrompt = `
 Generate post-answer feedback as strict JSON matching this schema:
@@ -169,10 +168,10 @@ OUTPUT REQUIREMENTS:
             return {
                 ...result,
                 transcript: finalTranscript,
-                // Map to legacy for safety if UI needs it
-                readinessBand: "RL2",
+                // Map to legacy if UI still needs it, but prefer meta.readinessLevel
+                readinessBand: result.readinessLevel || result.meta?.readinessLevel || "RL4",
                 coachReaction: result.ack,
-                strengths: result.observations || [],
+                strengths: result.observations || [], // Internal evidence for RL
                 opportunities: [result.primaryFocus?.headline || "Review feedback"]
             };
 

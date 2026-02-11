@@ -119,6 +119,7 @@ create table if not exists questions (
 
   question_index int not null,
   question_text text not null,
+  category text not null default 'General',
 
   -- optional: store structured data for later
   competencies jsonb null,
