@@ -38,7 +38,7 @@ export default function InitialsScreen() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, ease: 'easeOut' }}
-                className="w-full max-w-xl mx-auto px-6 py-12 md:py-24 space-y-12 flex flex-col min-h-[100dvh]"
+                className="w-full max-w-xl mx-auto px-6 py-12 md:py-24 space-y-8 flex flex-col min-h-[100dvh]"
             >
                 {/* 1. Logo Area */}
                 <div className="flex justify-between items-center shrink-0">
@@ -54,7 +54,7 @@ export default function InitialsScreen() {
 
                 {/* 2. Primary Heading */}
                 <div className="space-y-4 text-left">
-                    <h1 className="text-3xl md:text-4xl font-medium tracking-tight text-primary leading-tight">
+                    <h1 className="text-2xl md:text-4xl font-medium tracking-tight text-primary leading-tight">
                         Interview Practice Session
                     </h1>
                 </div>
@@ -73,16 +73,14 @@ export default function InitialsScreen() {
                         </p>
                     </div>
 
-                    {/* 5. Visibility Statement - Now same size/color */}
-                    <div className="flex items-start gap-3 p-4">
-                        <p className="text-lg text-muted-foreground">
-                            The person who shared this link may review your responses to help guide your preparation. Only you can see coaching feedback received during practice.
-                        </p>
-                    </div>
+                    {/* 5. Visibility Statement - Now aligned with intro */}
+                    <p className="text-lg text-muted-foreground">
+                        The person who shared this link may review your responses to help guide your preparation. Only you can see coaching feedback received during practice.
+                    </p>
                 </div>
 
                 {/* 6. Initials Input */}
-                <div className="space-y-4">
+                <div className="space-y-2">
                     <label htmlFor="initials-input" className="block text-lg font-medium text-foreground">
                         Enter your initials to begin
                     </label>
@@ -104,7 +102,7 @@ export default function InitialsScreen() {
                             )}
                         />
                         {/* Feedback Text */}
-                        <p className="mt-2 text-sm text-muted-foreground">
+                        <p className="mt-1 text-sm text-muted-foreground">
                             *Used to confirm the session was opened by the intended person. ({session?.candidateName || "Candidate"})
                         </p>
                     </div>
@@ -113,7 +111,7 @@ export default function InitialsScreen() {
                 <div className="flex-1" />
 
                 {/* 7. Primary CTA - Anchored Bottom */}
-                <div className="pt-4 pb-8 sticky bottom-0 bg-background/95 backdrop-blur-sm border-t md:border-t-0 md:bg-transparent">
+                <div className="pt-4 pb-2 sticky bottom-0 bg-background/95 backdrop-blur-sm border-t md:border-t-0 md:bg-transparent">
                     <Button
                         onClick={handleBegin}
                         disabled={initials.length === 0 || isStarting}
@@ -129,7 +127,7 @@ export default function InitialsScreen() {
                 </div>
 
                 {/* 8. Footer Microcopy - Moving below button or keeping? Usually below button is fine but sticky makes it tricky. Let's keep it below button in the scroll flow if sticking. */}
-                <div className="text-left pb-8">
+                <div className="text-left pb-0">
                     <p className="text-sm text-muted-foreground">
                         You can return to this session anytime using the same link.
                     </p>

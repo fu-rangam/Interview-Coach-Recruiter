@@ -11,7 +11,7 @@ interface LandingScreenProps {
 export default function LandingScreen({ onStart, role = "Candidate" }: LandingScreenProps) {
     return (
         <div className="min-h-[100dvh] w-full bg-background font-sans text-foreground selection:bg-primary/10 selection:text-primary overflow-y-auto">
-            <div className="w-full max-w-xl mx-auto px-6 py-12 md:py-24 space-y-12 flex flex-col min-h-[100dvh]">
+            <div className="w-full max-w-xl mx-auto px-6 py-12 md:py-24 space-y-8 flex flex-col min-h-[100dvh]">
 
                 {/* 1. Logo Area */}
                 <div className="flex justify-between items-center shrink-0">
@@ -27,7 +27,7 @@ export default function LandingScreen({ onStart, role = "Candidate" }: LandingSc
 
                 {/* Header */}
                 <div className="space-y-6 text-left">
-                    <h1 className="text-3xl md:text-4xl font-medium tracking-tight text-primary leading-tight">
+                    <h1 className="text-2xl md:text-4xl font-medium tracking-tight text-primary leading-tight">
                         {role} Interview Practice
                     </h1>
                     <p className="text-lg text-muted-foreground leading-relaxed">
@@ -61,7 +61,7 @@ export default function LandingScreen({ onStart, role = "Candidate" }: LandingSc
                 <div className="flex-1" />
 
                 {/* CTA - Stick to bottom */}
-                <div className="pt-4 pb-8 sticky bottom-0 bg-background/95 backdrop-blur-sm border-t md:border-t-0 md:bg-transparent">
+                <div className="pt-4 pb-2 sticky bottom-0 bg-background/95 backdrop-blur-sm border-t md:border-t-0 md:bg-transparent">
                     <Button
                         size="lg"
                         onClick={onStart}

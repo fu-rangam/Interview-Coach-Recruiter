@@ -15,6 +15,7 @@ import { useTextToSpeech } from "@/features/audio/hooks/useTextToSpeech";
 import { Mic, Loader2, Keyboard, ArrowRight, Volume2, StopCircle, Lightbulb, X, Sparkles } from 'lucide-react';
 import { cn } from "@/lib/cn";
 import { useSmartHints } from '../hooks/useSmartHints';
+import { CategoryTooltip } from './CategoryTooltip';
 import { TipsAccordion } from './TipsAccordion';
 import { StrongResponseAccordion } from './StrongResponseAccordion';
 import { useStrongResponse } from '../hooks/useStrongResponse';
@@ -70,6 +71,10 @@ export function UnifiedSessionScreen() {
 
     const [strongResponseOpen, setStrongResponseOpen] = useState(false);
 
+    // Refs for click-away logic
+    const hintContainerRef = useRef<HTMLDivElement>(null);
+    const strongResponseContainerRef = useRef<HTMLDivElement>(null);
+
     // Audio Hooks
     const {
         // isListening, // Unused
@@ -84,6 +89,7 @@ export function UnifiedSessionScreen() {
         isInitializing: isRecordingInitializing,
         startRecording,
         stopRecording,
+        warmUp,
         mediaStream
     } = useAudioRecording();
 
@@ -125,8 +131,32 @@ export function UnifiedSessionScreen() {
         resetTranscript();
         setHintOpen(false);
         setStrongResponseOpen(false);
-        // Stop recording if active? Maybe safe to keep it simple
-    }, [currentQuestion.id, resetTranscript]);
+        // Warm up mic for next question
+        if (mode === 'voice') {
+            warmUp();
+        }
+    }, [currentQuestion.id, resetTranscript, warmUp, mode]);
+
+    // Click-away logic to close hints/examples
+    useEffect(() => {
+        if (!hintOpen && !strongResponseOpen) return;
+
+        const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+            if (hintOpen && hintContainerRef.current && !hintContainerRef.current.contains(event.target as Node)) {
+                setHintOpen(false);
+            }
+            if (strongResponseOpen && strongResponseContainerRef.current && !strongResponseContainerRef.current.contains(event.target as Node)) {
+                setStrongResponseOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        document.addEventListener('touchstart', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('touchstart', handleClickOutside);
+        };
+    }, [hintOpen, strongResponseOpen]);
 
 
     // --- Handlers ---
@@ -202,9 +232,13 @@ export function UnifiedSessionScreen() {
                     <div className="bg-blue-600 text-white rounded-2xl p-6 md:p-10 shadow-xl w-full ring-1 ring-white/10 relative overflow-hidden transition-all duration-300">
                         {/* Header: Badge */}
                         <div className="flex justify-start mb-6">
-                            <span className="inline-flex items-center px-3 py-1 rounded-full bg-white/20 text-sm font-medium text-white backdrop-blur-sm capitalize">
-                                {currentQuestion.category.toLowerCase()}
-                            </span>
+                            <CategoryTooltip category={currentQuestion.category}>
+                                <span className="inline-flex items-center px-3 py-1 rounded-full bg-white/20 text-sm font-medium text-white backdrop-blur-sm cursor-help hover:bg-white/30 transition-colors">
+                                    {currentQuestion.category.toUpperCase() === 'STAR' ? 'STAR' :
+                                        currentQuestion.category.toUpperCase() === 'PERMA' ? 'PERMA' :
+                                            currentQuestion.category}
+                                </span>
+                            </CategoryTooltip>
                         </div>
 
                         {/* Body: Question */}
@@ -254,6 +288,7 @@ export function UnifiedSessionScreen() {
                         <AnimatePresence>
                             {hintOpen && (
                                 <motion.div
+                                    ref={hintContainerRef}
                                     initial={{ height: 0, opacity: 0 }}
                                     animate={{ height: "auto", opacity: 1 }}
                                     exit={{ height: 0, opacity: 0 }}
@@ -281,6 +316,7 @@ export function UnifiedSessionScreen() {
                         <AnimatePresence>
                             {strongResponseOpen && (
                                 <motion.div
+                                    ref={strongResponseContainerRef}
                                     initial={{ height: 0, opacity: 0 }}
                                     animate={{ height: "auto", opacity: 1 }}
                                     exit={{ height: 0, opacity: 0 }}
@@ -307,6 +343,40 @@ export function UnifiedSessionScreen() {
                             )}
                         </AnimatePresence>
                     </div>
+
+                    {/* 2. Mode Toggle - Centered between Card and Input */}
+                    {!isReviewing && !hasSubmitted && !hintOpen && !strongResponseOpen && (
+                        <div className="flex justify-center py-6 z-20">
+                            <div className="bg-white p-1.5 rounded-full flex gap-1 relative shadow-sm border border-slate-200 scale-110">
+                                <button
+                                    onClick={() => setMode('voice')}
+                                    className={cn(
+                                        "p-2.5 rounded-full transition-all flex items-center justify-center",
+                                        mode === 'voice'
+                                            ? "bg-blue-600 text-white shadow-md ring-1 ring-blue-700"
+                                            : "bg-white text-slate-400 hover:text-slate-600"
+                                    )}
+                                    title="Voice Mode"
+                                    aria-label="Switch to Voice Mode"
+                                >
+                                    <Mic size={20} />
+                                </button>
+                                <button
+                                    onClick={() => setMode('text')}
+                                    className={cn(
+                                        "p-2.5 rounded-full transition-all flex items-center justify-center",
+                                        mode === 'text'
+                                            ? "bg-blue-600 text-white shadow-md ring-1 ring-blue-700"
+                                            : "bg-white text-slate-400 hover:text-slate-600"
+                                    )}
+                                    title="Text Mode"
+                                    aria-label="Switch to Text Mode"
+                                >
+                                    <Keyboard size={20} />
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 <div className={cn(
@@ -317,22 +387,18 @@ export function UnifiedSessionScreen() {
                 )}>
                     {/* Simplified Input Area */}
                     {!isReviewing && !hasSubmitted && (
-                        <div className="flex-1 flex flex-col relative min-h-[420px]">
+                        <div className="flex-1 flex flex-col relative min-h-[320px]">
                             {/* ... Input Logic ... */}
                             {mode === 'voice' ? (
                                 <div className="flex-1 flex flex-col items-center justify-center relative p-6">
                                     {/* Visualizer */}
                                     <div className="h-40 w-full max-w-md flex items-center justify-center mb-12">
-                                        {isRecording ? (
+                                        {isRecording && (
                                             <AudioVisualizer
                                                 stream={mediaStream}
                                                 isRecording={isRecording}
                                                 className="w-full h-full"
                                             />
-                                        ) : (
-                                            <div className="text-slate-300">
-                                                <Volume2 size={48} className="opacity-20" />
-                                            </div>
                                         )}
                                     </div>
                                     <span className={cn(
@@ -384,7 +450,7 @@ export function UnifiedSessionScreen() {
                                         )}
                                     </div>
 
-                                    <p className="mt-8 text-sm text-slate-500 font-medium animate-pulse">
+                                    <p className="mt-6 text-sm text-slate-500 font-medium animate-pulse">
                                         {isRecording ? "Listening..." : "Tap to Speak"}
                                     </p>
                                 </div>
@@ -402,32 +468,9 @@ export function UnifiedSessionScreen() {
 
                             {/* Footer Controls */}
                             <div className={cn(
-                                "p-4 border-t flex justify-between items-center transition-colors duration-300",
+                                "p-4 border-t flex justify-end items-center transition-colors duration-300",
                                 mode === 'voice' ? "bg-transparent border-t-white/10" : "bg-slate-50 border-t-slate-100"
                             )}>
-                                <div className="bg-slate-100 p-1 rounded-full flex relative shadow-inner border border-slate-200">
-                                    <button
-                                        onClick={() => setMode('voice')}
-                                        className={cn(
-                                            "p-2 rounded-full transition-all text-slate-500 hover:text-slate-700",
-                                            mode === 'voice' && "bg-white text-blue-600 shadow-sm ring-1 ring-slate-200"
-                                        )}
-                                        title="Voice Mode"
-                                    >
-                                        <Mic size={20} />
-                                    </button>
-                                    <button
-                                        onClick={() => setMode('text')}
-                                        className={cn(
-                                            "p-2 rounded-full transition-all text-slate-500 hover:text-slate-700",
-                                            mode === 'text' && "bg-white text-blue-600 shadow-sm ring-1 ring-slate-200"
-                                        )}
-                                        title="Text Mode"
-                                    >
-                                        <Keyboard size={20} />
-                                    </button>
-                                </div>
-
                                 {mode === 'text' && (
                                     <Button
                                         onClick={handleSubmit}
@@ -481,8 +524,9 @@ export function UnifiedSessionScreen() {
             </main >
 
             {/* Feedback Drawer - Moved outside main for overlay positioning */}
-            <FeedbackDrawer
-                isOpen={isReviewing && isDrawerOpen}
+            < FeedbackDrawer
+                isOpen={isReviewing && isDrawerOpen
+                }
                 analysis={analysis}
                 isThinking={isThinking}
                 onNext={() => {
