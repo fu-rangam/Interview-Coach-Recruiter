@@ -26,8 +26,8 @@ export function TipsAccordion({ tips, isLoading, className }: TipsAccordionProps
     if (isLoading) {
         return (
             <div className={cn("w-full bg-white/5 rounded-xl border border-white/10 p-8", className)}>
-                <div className="flex flex-col items-center justify-center space-y-3 text-white/50">
-                    <Loader2 className="w-6 h-6 animate-spin text-blue-200" />
+                <div className="flex flex-col items-center justify-center space-y-3 text-slate-400 dark:text-white/50">
+                    <Loader2 className="w-6 h-6 animate-spin text-blue-600 dark:text-blue-200" />
                     <p className="text-sm font-medium">Analyzing question context...</p>
                 </div>
             </div>
@@ -46,7 +46,8 @@ export function TipsAccordion({ tips, isLoading, className }: TipsAccordionProps
                 id="lookingFor"
                 icon={Target}
                 title="What They're Looking For"
-                color="text-indigo-300"
+                color="text-indigo-500"
+                bgColor="bg-indigo-500"
                 isExpanded={expandedSection === 'lookingFor'}
                 onToggle={toggleSection}
             />
@@ -58,7 +59,8 @@ export function TipsAccordion({ tips, isLoading, className }: TipsAccordionProps
                 id="pointsToCover"
                 icon={ListChecks}
                 title="Key Points to Cover"
-                color="text-emerald-300"
+                color="text-emerald-500"
+                bgColor="bg-emerald-500"
                 isExpanded={expandedSection === 'pointsToCover'}
                 onToggle={toggleSection}
             />
@@ -74,7 +76,8 @@ export function TipsAccordion({ tips, isLoading, className }: TipsAccordionProps
                 id="framework"
                 icon={Layout}
                 title="Suggested Framework"
-                color="text-blue-300"
+                color="text-blue-500"
+                bgColor="bg-blue-500"
                 isExpanded={expandedSection === 'framework'}
                 onToggle={toggleSection}
             />
@@ -86,18 +89,19 @@ export function TipsAccordion({ tips, isLoading, className }: TipsAccordionProps
                 id="industry"
                 icon={Binary}
                 title="Industry Specifics"
-                color="text-cyan-300"
+                color="text-cyan-500"
+                bgColor="bg-cyan-500"
                 isExpanded={expandedSection === 'industry'}
                 onToggle={toggleSection}
             />
             <SectionContent isExpanded={expandedSection === 'industry'}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="bg-black/20 p-3 rounded-lg">
-                        <span className="text-xs font-medium text-cyan-200/70 block mb-1">Metrics</span>
+                    <div className="bg-slate-100 dark:bg-black/20 p-3 rounded-lg">
+                        <span className="text-xs font-medium text-cyan-700 dark:text-cyan-200/70 block mb-1">Metrics</span>
                         <p className="text-sm">{tips.industrySpecifics.metrics}</p>
                     </div>
-                    <div className="bg-black/20 p-3 rounded-lg">
-                        <span className="text-xs font-medium text-cyan-200/70 block mb-1">Tools</span>
+                    <div className="bg-slate-100 dark:bg-black/20 p-3 rounded-lg">
+                        <span className="text-xs font-medium text-cyan-700 dark:text-cyan-200/70 block mb-1">Tools</span>
                         <p className="text-sm">{tips.industrySpecifics.tools}</p>
                     </div>
                 </div>
@@ -107,7 +111,8 @@ export function TipsAccordion({ tips, isLoading, className }: TipsAccordionProps
                 id="mistakes"
                 icon={AlertTriangle}
                 title="Mistakes to Avoid"
-                color="text-rose-300"
+                color="text-rose-500"
+                bgColor="bg-rose-500"
                 isExpanded={expandedSection === 'mistakes'}
                 onToggle={toggleSection}
             />
@@ -123,7 +128,8 @@ export function TipsAccordion({ tips, isLoading, className }: TipsAccordionProps
                 id="protip"
                 icon={Sparkles}
                 title="Pro Tip"
-                color="text-amber-300"
+                color="text-amber-500"
+                bgColor="bg-amber-500"
                 isExpanded={expandedSection === 'protip'}
                 onToggle={toggleSection}
             />
@@ -132,7 +138,7 @@ export function TipsAccordion({ tips, isLoading, className }: TipsAccordionProps
                     <div className="shrink-0 mt-1">
                         <Briefcase className="w-4 h-4 text-amber-300" />
                     </div>
-                    <p className="text-amber-50/90 italic">&quot;{tips.proTip}&quot;</p>
+                    <p className="text-amber-700 dark:text-amber-50/90 italic">&quot;{tips.proTip}&quot;</p>
                 </div>
             </SectionContent>
         </div>
@@ -146,6 +152,7 @@ interface SectionHeaderProps {
     icon: React.ElementType;
     title: string;
     color: string;
+    bgColor: string;
     isExpanded: boolean;
     onToggle: (id: string) => void;
 }
@@ -155,6 +162,7 @@ function SectionHeader({
     icon: Icon,
     title,
     color,
+    bgColor,
     isExpanded,
     onToggle
 }: SectionHeaderProps) {
@@ -164,22 +172,30 @@ function SectionHeader({
             className={cn(
                 "w-full flex items-center justify-between p-4 rounded-xl border transition-all duration-200 group text-left",
                 isExpanded
-                    ? "bg-white/10 border-white/20"
-                    : "bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/10"
+                    ? "bg-slate-100 dark:bg-white/10 border-slate-200 dark:border-white/20"
+                    : "bg-background dark:bg-white/5 border-slate-100 dark:border-white/5 hover:bg-slate-100 dark:hover:bg-white/10 hover:border-slate-200 dark:hover:border-white/10"
             )}
         >
             <div className="flex items-center gap-3">
-                <div className={cn("p-2 rounded-lg bg-black/20 transition-colors", color)}>
-                    <Icon className="w-5 h-5" />
+                <div className={cn(
+                    "p-2 rounded-lg transition-colors",
+                    isExpanded
+                        ? "bg-background dark:bg-black/20"
+                        : bgColor
+                )}>
+                    <Icon className={cn(
+                        "w-5 h-5 transition-colors",
+                        isExpanded ? color : "text-white"
+                    )} />
                 </div>
-                <span className={cn("font-medium transition-colors text-white")}>
+                <span className={cn("font-medium transition-colors text-slate-900 dark:text-white")}>
                     {title}
                 </span>
             </div>
             <ChevronDown
                 className={cn(
-                    "w-5 h-5 text-white/50 transition-transform duration-300",
-                    isExpanded && "rotate-180 text-white"
+                    "w-5 h-5 text-slate-400 dark:text-white/50 transition-transform duration-300",
+                    isExpanded && "rotate-180 text-blue-600 dark:text-white"
                 )}
             />
         </button>
@@ -197,8 +213,8 @@ function SectionContent({ isExpanded, children }: { isExpanded: boolean; childre
                     transition={{ duration: 0.2, ease: "easeInOut" }}
                     className="overflow-hidden"
                 >
-                    <div className="p-4 pt-0 text-white/90 text-sm leading-relaxed">
-                        <div className="p-4 bg-black/20 rounded-b-xl border-x border-b border-white/10 -mt-1 mx-1">
+                    <div className="p-4 pt-0 text-slate-700 dark:text-white/90 text-sm leading-relaxed">
+                        <div className="p-4 bg-slate-500/5 dark:bg-black/20 rounded-b-xl border-x border-b border-slate-200 dark:border-white/10 -mt-1 mx-1">
                             {children}
                         </div>
                     </div>

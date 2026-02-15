@@ -98,6 +98,16 @@ export const useAudioRecording = () => {
         });
     }, [mediaStream]);
 
+    const resetAudio = useCallback(() => {
+        setAudioBlob(null);
+        if (mediaStream) {
+            mediaStream.getTracks().forEach((track) => track.stop());
+            setMediaStream(null);
+        }
+        mediaRecorderRef.current = null;
+        chunksRef.current = [];
+    }, [mediaStream]);
+
     return {
         isRecording,
         isInitializing,
@@ -105,6 +115,7 @@ export const useAudioRecording = () => {
         startRecording,
         stopRecording,
         warmUp,
+        resetAudio,
         mediaStream,
         permissionError,
     };

@@ -40,14 +40,14 @@ export function RecruiterSidebar({ className, onNavigate, user, profile }: Recru
         <aside className={cn("bg-white border-r flex flex-col h-screen sticky top-0", className)}>
             <div className="p-6 pb-0">
                 <div className="mb-8">
-                    <h1 className="font-bold text-xl tracking-tight text-primary">Ready2Work</h1>
+                    <h1 className="font-bold text-xl tracking-tight text-primary font-display">Ready2Work</h1>
                 </div>
 
                 <div className="mb-6 pb-6 border-b">
                     <div className="text-sm font-semibold text-muted-foreground uppercase tracking-widest mb-1">
                         Recruiter
                     </div>
-                    <div className="font-medium text-lg text-foreground truncate" title={displayName}>
+                    <div className="font-medium text-lg text-foreground truncate font-display" title={displayName}>
                         {displayName}
                     </div>
                 </div>
@@ -77,7 +77,7 @@ export function RecruiterSidebar({ className, onNavigate, user, profile }: Recru
                     )}
                     onClick={onNavigate}
                 >
-                    My Sessions
+                    Invites & Sessions
                 </Link>
 
                 <Link

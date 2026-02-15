@@ -66,6 +66,9 @@ const config = {
                     foreground: "hsl(var(--warning-foreground))",
                 },
                 // Override default blue to match brand primary (#0c61e7)
+                brand: {
+                    deep: "#08409a",
+                },
                 blue: {
                     50: "#f0f7ff",
                     100: "#e0f0ff",

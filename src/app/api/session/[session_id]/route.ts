@@ -16,6 +16,11 @@ export async function GET(
 
     const session = await repository.get(params.session_id);
     if (!session) return NextResponse.json({ error: "Session not found" }, { status: 404 });
+
+    // Mark as viewed asynchronously (don't block the response)
+    // We only mark viewed if it's the candidate fetching it (verified by auth above)
+    repository.markViewed(params.session_id).catch(err => console.error("Mark Viewed Failed:", err));
+
     return NextResponse.json(session);
 }
 

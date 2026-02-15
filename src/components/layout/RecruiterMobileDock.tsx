@@ -44,7 +44,7 @@ export function RecruiterMobileDock() {
 
     const navItems = [
         { icon: Plus, label: "Create", href: "/recruiter/create" },
-        { icon: List, label: "Sessions", href: "/recruiter" },
+        { icon: List, label: "Invites & Sessions", href: "/recruiter" },
         { icon: Users, label: "Candidates", href: "#" }, // Placeholder
         { icon: Settings, label: "Settings", href: "/recruiter/settings" },
     ];

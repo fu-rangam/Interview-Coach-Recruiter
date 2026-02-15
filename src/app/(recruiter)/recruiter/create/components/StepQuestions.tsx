@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Loader2 } from "lucide-react";
 import { QuestionInput, StepFooterProps } from "../constants";
 
 interface StepQuestionsProps {
@@ -14,7 +14,8 @@ interface StepQuestionsProps {
     setTechnical: (val: QuestionInput[]) => void;
     onBack: () => void;
     onNext: () => void;
-    onPopulateDebug?: () => void;
+    onGenerateQuestionsAI?: () => void;
+    isGeneratingQuestions?: boolean;
     StepFooter: React.ComponentType<StepFooterProps>;
 }
 
@@ -23,9 +24,12 @@ export function StepQuestions({
     perma, setPerma,
     technical, setTechnical,
     onBack, onNext,
-    onPopulateDebug,
+    onGenerateQuestionsAI,
+    isGeneratingQuestions,
     StepFooter
 }: StepQuestionsProps) {
+    const isDev = process.env.NODE_ENV === 'development';
+
     const addTechnical = () => {
         setTechnical([...technical, {
             id: `tech-${Date.now()}`,
@@ -46,14 +50,23 @@ export function StepQuestions({
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-bold">Step 2: Configure Questions</h2>
-                {onPopulateDebug && (
-                    <button
-                        onClick={onPopulateDebug}
-                        className="w-4 h-4 bg-red-500/10 hover:bg-red-500 transition-colors rounded-full cursor-pointer"
-                        title="Debug: Populate Questions"
-                    />
-                )}
+                <h2 className="text-2xl font-bold font-display">Step 2: Configure Questions</h2>
+                <div className="flex items-center gap-2">
+                    {/* Dev AI Generate Button */}
+                    {isDev && onGenerateQuestionsAI && (
+                        <button
+                            onClick={onGenerateQuestionsAI}
+                            disabled={isGeneratingQuestions}
+                            className="px-3 py-1.5 text-xs font-medium rounded-full bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition-colors border border-emerald-200 disabled:opacity-50 flex items-center gap-1.5"
+                        >
+                            {isGeneratingQuestions ? (
+                                <><Loader2 className="w-3 h-3 animate-spin" /> Generating...</>
+                            ) : (
+                                <>✨ AI Generate</>
+                            )}
+                        </button>
+                    )}
+                </div>
             </div>
 
             {/* STAR Section */}
@@ -130,3 +143,4 @@ export function StepQuestions({
         </div>
     );
 }
+

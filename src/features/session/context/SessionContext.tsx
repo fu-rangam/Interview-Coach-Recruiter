@@ -30,7 +30,7 @@ export interface SessionContextType {
     loadTipsForQuestion: (questionId: string) => Promise<void>;
     saveAnswer: (
         questionId: string,
-        answer: { audioBlob?: Blob; text?: string; analysis: AnalysisResult | null }
+        answer: { audioBlob?: Blob; text?: string; transcript?: string; analysis: AnalysisResult | null }
     ) => void;
     clearAnswer: (questionId: string) => void;
     updateAnswerAnalysis: (questionId: string, partialAnalysis: Partial<AnalysisResult>) => void;

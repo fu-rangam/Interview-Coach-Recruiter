@@ -14,20 +14,58 @@ const sessionRepo = new SupabaseSessionRepository();
 export const dynamic = 'force-dynamic';
 
 function getReadinessIndicator(session: InterviewSession) {
-    if (!session.answers || Object.keys(session.answers).length === 0) {
-        return <Badge variant="outline" className="text-gray-500">Not Started</Badge>;
+    const { status, answers, questions, viewedAt, enteredInitials } = session;
+    const answerList = Object.values(answers || {});
+    const answerCount = answerList.length;
+    const submittedCount = answerList.filter(a => !!a.submittedAt).length;
+    const questionCount = questions.length;
+
+    const commonClasses = "w-[145px] justify-center text-center";
+
+    // 1. Completed
+    if (status === 'COMPLETED' || (submittedCount === questionCount && questionCount > 0)) {
+        return <Badge variant="default" className={`${commonClasses} bg-green-600 hover:bg-green-700`}>Completed</Badge>;
     }
 
-    // Convert answers object to array
-    const answers = Object.values(session.answers);
-    const answerCount = answers.length;
-    const questionCount = session.questions.length;
-
-    if (answerCount < questionCount) {
-        return <Badge variant="secondary" className="bg-blue-100 text-blue-800">In Progress ({answerCount}/{questionCount})</Badge>;
+    // 2. In Progress (X/Y submitted)
+    if (submittedCount > 0) {
+        return <Badge variant="secondary" className={`${commonClasses} bg-blue-100 text-blue-800`}>
+            In Progress ({submittedCount}/{questionCount})
+        </Badge>;
     }
 
-    return <Badge variant="default" className="bg-green-600 hover:bg-green-700">Completed</Badge>;
+    // 3. Drafting Answer
+    if (status === 'IN_SESSION' && answerCount > 0) {
+        return <Badge variant="secondary" className={`${commonClasses} bg-indigo-100 text-indigo-800 border-indigo-200`}>
+            Drafting Answer
+        </Badge>;
+    }
+
+    // 4. Session Started
+    if (status === 'IN_SESSION') {
+        return <Badge variant="secondary" className={`${commonClasses} bg-blue-50 text-blue-700 border-blue-100`}>
+            Session Started
+        </Badge>;
+    }
+
+    // 5. Initials Entered
+    if (enteredInitials) {
+        return <Badge variant="outline" className={`${commonClasses} text-amber-600 border-amber-200 bg-amber-50`}>
+            Initials Entered
+        </Badge>;
+    }
+
+    // 6. Link Viewed
+    if (viewedAt) {
+        return <Badge variant="outline" className={`${commonClasses} text-indigo-500 border-indigo-200`}>
+            Link Viewed
+        </Badge>;
+    }
+
+    // 7. Invite Sent
+    return <Badge variant="outline" className={`${commonClasses} text-slate-400 border-slate-200 uppercase text-[10px]`}>
+        Invite Sent
+    </Badge>;
 }
 
 export default async function SessionDetailsPage({ params }: { params: { id: string } }) {
@@ -50,13 +88,13 @@ export default async function SessionDetailsPage({ params }: { params: { id: str
     return (
         <div className="space-y-8">
             <div className="flex items-center gap-4">
-                <Button variant="ghost" size="icon" asChild>
+                <Button variant="ghost" size="icon" asChild className="text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors">
                     <Link href="/recruiter">
                         <ArrowLeft className="w-5 h-5" />
                     </Link>
                 </Button>
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight text-slate-900">Session Details</h1>
+                    <h1 className="text-2xl font-bold tracking-tight text-slate-900 font-display">Session Details</h1>
                     <p className="text-slate-500">Review candidate performance and feedback.</p>
                 </div>
             </div>

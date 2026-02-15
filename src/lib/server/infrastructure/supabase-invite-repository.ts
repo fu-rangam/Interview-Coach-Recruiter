@@ -1,6 +1,7 @@
 import { Invite, InviteRepository } from "@/lib/domain/invite";
 import { createClient } from "@/lib/supabase/server";
 import { hashToken } from "@/lib/server/crypto";
+import { encrypt } from "@/lib/server/encryption";
 
 import { SupabaseClient } from "@supabase/supabase-js";
 
@@ -19,7 +20,8 @@ export class SupabaseInviteRepository implements InviteRepository {
                 status: 'NOT_STARTED',
                 // Store candidate info in intake_json
                 intake_json: {
-                    candidate: invite.candidate
+                    candidate: invite.candidate,
+                    invite_token: encrypt(invite.token)
                 }
             })
             .select('session_id')

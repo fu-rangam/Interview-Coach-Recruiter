@@ -3,7 +3,7 @@
 import { useSession } from "../context/SessionContext";
 import InitialsScreen from "./InitialsScreen";
 import LandingScreen from "./LandingScreen";
-import { UnifiedSessionScreen } from "./UnifiedSessionScreen";
+import UnifiedSessionScreen from "./UnifiedSessionScreen";
 // import ActiveQuestionScreen from "./ActiveQuestionScreen"; 
 // import ReviewFeedbackScreen from "./ReviewFeedbackScreen";
 import SummaryScreen from "./SummaryScreen";

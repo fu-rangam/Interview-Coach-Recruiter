@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import { Button } from "@/components/ui/button";
 import { Check, ChevronLeft } from "lucide-react";
-import { Details, QuestionInput, STAR_TEMPLATE, PERMA_TEMPLATE } from "./constants";
+import { Details, QuestionInput, STAR_TEMPLATE, PERMA_TEMPLATE, DEV_CANDIDATE_POOL, DEV_JOB_POOL } from "./constants";
 
 // Sub-components
 import { StepDetails } from "./components/StepDetails";
@@ -30,6 +30,7 @@ export default function CreateInviteWizard() {
     const [other, setOther] = useState<QuestionInput[]>([]);
 
     const [isLoading, setIsLoading] = useState(false);
+    const [isGeneratingQuestions, setIsGeneratingQuestions] = useState(false);
     const [inviteLink, setInviteLink] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [editingField, setEditingField] = useState<string | null>(null);
@@ -183,29 +184,49 @@ export default function CreateInviteWizard() {
         </div>
     );
 
-    // Debug Helpers
-    const populateDetails = () => setDetails({
-        firstName: "Ian", lastName: "Caldwell", candidateEmail: "ICClearly@yopmail.com",
-        reqId: "RCI-QD-18250-1", role: "Phlebotomist II", jd: details.jd
-    });
+    // ─── Dev Quick-Fill Helpers ─────────────────────────────────
+    const randomizeCandidate = () => {
+        const pick = DEV_CANDIDATE_POOL[Math.floor(Math.random() * DEV_CANDIDATE_POOL.length)];
+        setDetails(prev => ({
+            ...prev,
+            firstName: pick.firstName,
+            lastName: pick.lastName,
+            candidateEmail: pick.email
+        }));
+    };
 
-    const populateQuestions = () => {
-        const newStar = [...STAR_TEMPLATE];
-        newStar[0].text = "Can you describe a time when you had to draw blood from a nervous patient? How did you handle the situation?";
-        newStar[1].text = "Describe a time when you were responsible for ensuring specimens were collected correctly. What steps did you take?";
-        newStar[2].text = "What actions did you take to improve the blood draw process in your previous role?";
-        newStar[3].text = "What was the outcome of a time when you successfully resolved a conflict with a patient during a blood draw?";
-        setStar(newStar);
+    const randomizeJob = () => {
+        const pick = DEV_JOB_POOL[Math.floor(Math.random() * DEV_JOB_POOL.length)];
+        setDetails(prev => ({
+            ...prev,
+            reqId: pick.reqId,
+            role: pick.role,
+            jd: pick.jd
+        }));
+    };
 
-        const newPerma = [...PERMA_TEMPLATE];
-        newPerma[0].text = "How do you maintain a positive attitude when facing stressful situations at work?";
-        newPerma[1].text = "How do you stay engaged and motivated during repetitive tasks like blood draws?";
-        newPerma[2].text = "How do you build rapport with patients quickly?";
-        newPerma[3].text = "What does your work as a phlebotomist mean to you personally?";
-        newPerma[4].text = "What is a significant accomplishment you achieved in your previous position?";
-        setPerma(newPerma);
+    const generateQuestionsAI = async () => {
+        if (!details.role) return;
+        setIsGeneratingQuestions(true);
+        try {
+            const res = await fetch("/api/dev/generate-questions", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ role: details.role, jobDescription: details.jd })
+            });
+            if (!res.ok) throw new Error("Generation failed");
+            const data = await res.json();
 
-        setTechnical([{ id: 'tech-1', text: "What techniques do you use to draw blood from pediatric patients?", category: 'Technical', label: 'Technical Q1' }]);
+            if (data.star) setStar(data.star.map((q: { text: string; label: string }, i: number) => ({ ...STAR_TEMPLATE[i], text: q.text })));
+            if (data.perma) setPerma(data.perma.map((q: { text: string; label: string }, i: number) => ({ ...PERMA_TEMPLATE[i], text: q.text })));
+            if (data.technical) setTechnical(data.technical.map((q: { text: string }, i: number) => ({
+                id: `tech-${i + 1}`, text: q.text, category: 'Technical', label: `Technical Q${i + 1}`
+            })));
+        } catch (e) {
+            console.error("AI question generation failed:", e);
+        } finally {
+            setIsGeneratingQuestions(false);
+        }
     };
 
     return (
@@ -231,8 +252,8 @@ export default function CreateInviteWizard() {
                 </div>
             </div>
 
-            {step === 1 && <StepDetails details={details} setDetails={setDetails} onNext={() => setStep(2)} onPopulateDebug={populateDetails} StepFooter={StepFooter} />}
-            {step === 2 && <StepQuestions star={star} setStar={setStar} perma={perma} setPerma={setPerma} technical={technical} setTechnical={setTechnical} onBack={() => setStep(1)} onNext={() => setStep(3)} onPopulateDebug={populateQuestions} StepFooter={StepFooter} />}
+            {step === 1 && <StepDetails details={details} setDetails={setDetails} onNext={() => setStep(2)} onRandomizeCandidate={randomizeCandidate} onRandomizeJob={randomizeJob} StepFooter={StepFooter} />}
+            {step === 2 && <StepQuestions star={star} setStar={setStar} perma={perma} setPerma={setPerma} technical={technical} setTechnical={setTechnical} onBack={() => setStep(1)} onNext={() => setStep(3)} onGenerateQuestionsAI={generateQuestionsAI} isGeneratingQuestions={isGeneratingQuestions} StepFooter={StepFooter} />}
             {step === 3 && <StepPreview details={details} star={star} perma={perma} technical={technical} other={other} error={error} isLoading={isLoading} onBack={() => setStep(2)} onHandleCreate={handleCreate} StepFooter={StepFooter} />}
             {step === 4 && <StepEmail emailDraft={emailDraft} setEmailDraft={setEmailDraft} recruiterProfile={recruiterProfile} editingField={editingField} toggleEdit={toggleEdit} inviteLink={inviteLink} onBack={() => setStep(3)} resetWizard={resetWizard} />}
         </div>

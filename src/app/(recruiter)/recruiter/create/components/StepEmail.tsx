@@ -40,7 +40,7 @@ export function StepEmail({
         <div className="space-y-6 font-sans">
             <div className="flex items-center justify-between">
                 <div>
-                    <h2 className="text-2xl font-bold">Step 4: Send Invitation</h2>
+                    <h2 className="text-2xl font-bold font-display">Step 4: Send Invitation</h2>
                     <p className="text-muted-foreground">Review and customize the invite email.</p>
                 </div>
             </div>

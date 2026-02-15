@@ -8,26 +8,42 @@ interface StepDetailsProps {
     details: Details;
     setDetails: (details: Details) => void;
     onNext: () => void;
-    onPopulateDebug?: () => void;
+    onRandomizeCandidate?: () => void;
+    onRandomizeJob?: () => void;
     StepFooter: React.ComponentType<StepFooterProps>;
 }
 
-export function StepDetails({ details, setDetails, onNext, onPopulateDebug, StepFooter }: StepDetailsProps) {
+export function StepDetails({ details, setDetails, onNext, onRandomizeCandidate, onRandomizeJob, StepFooter }: StepDetailsProps) {
+    const isDev = process.env.NODE_ENV === 'development';
+
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center">
-                <div>
-                    <h2 className="text-2xl font-bold">Step 1: Role & Candidate</h2>
-                    <p className="text-muted-foreground">Enter the details for this interview session.</p>
-                </div>
-                {onPopulateDebug && (
-                    <button
-                        onClick={onPopulateDebug}
-                        className="w-4 h-4 bg-red-500/10 hover:bg-red-500 transition-colors rounded-full cursor-pointer"
-                        title="Debug: Populate Data"
-                    />
-                )}
+            <div>
+                <h2 className="text-2xl font-bold font-display">Step 1: Role & Candidate</h2>
+                <p className="text-muted-foreground">Enter the details for this interview session.</p>
             </div>
+
+            {/* Dev Quick-Fill Buttons */}
+            {isDev && (
+                <div className="flex gap-2">
+                    {onRandomizeCandidate && (
+                        <button
+                            onClick={onRandomizeCandidate}
+                            className="px-3 py-1.5 text-xs font-medium rounded-full bg-violet-100 text-violet-700 hover:bg-violet-200 transition-colors border border-violet-200"
+                        >
+                            🎲 Random Candidate
+                        </button>
+                    )}
+                    {onRandomizeJob && (
+                        <button
+                            onClick={onRandomizeJob}
+                            className="px-3 py-1.5 text-xs font-medium rounded-full bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors border border-amber-200"
+                        >
+                            🎲 Random Job
+                        </button>
+                    )}
+                </div>
+            )}
 
             <Card>
                 <CardContent className="space-y-4 pt-6">
@@ -78,3 +94,4 @@ export function StepDetails({ details, setDetails, onNext, onPopulateDebug, Step
         </div>
     );
 }
+

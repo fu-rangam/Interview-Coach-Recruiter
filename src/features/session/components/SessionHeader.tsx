@@ -1,61 +1,58 @@
 import React from 'react';
 import { useSession } from '../context/SessionContext';
-import { cn } from '@/lib/cn';
+import { X } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 export function SessionHeader() {
-    const { session, goToQuestion } = useSession();
+    const { session, trackEvent } = useSession();
+    const router = useRouter();
+
     if (!session) return null;
-    const { questions, currentQuestionIndex, answers } = session;
+    const { questions, currentQuestionIndex } = session;
+
+    const handleExit = () => {
+        if (window.confirm("Are you sure you want to exit? Your progress is saved.")) {
+            trackEvent('tier2', 'session_stop_early');
+            router.push('/dashboard');
+        }
+    };
+
+    const percentage = Math.round(((currentQuestionIndex + 1) / questions.length) * 100);
 
     return (
-        <header className="border-b bg-slate-50 dark:bg-neutral-900 flex justify-center items-center sticky top-0 z-20 shrink-0 h-[60px]">
-            {/* Question Navigator - Matches UnifiedSessionScreen padding (p-4 md:p-6) */}
-            <div className="w-full max-w-5xl mx-auto px-4 md:px-6 relative h-full flex items-center">
-                {/* Connecting Line - Darker for visibility */}
-                <div className="absolute top-1/2 left-4 md:left-6 right-4 md:right-6 h-[1px] bg-slate-200 dark:bg-neutral-600 -translate-y-1/2 z-0" aria-hidden="true" />
+        <header className="border-b bg-white/50 dark:bg-neutral-900/50 backdrop-blur-md sticky top-0 z-20 shrink-0 overflow-hidden">
+            <div className="w-full max-w-4xl mx-auto px-4 md:px-6 lg:px-10 py-4 pb-3">
+                <div className="flex justify-between items-end mb-3">
+                    {/* Left: Progress Label */}
+                    <div className="flex items-center gap-4">
+                        <span className="text-base font-bold text-slate-600 dark:text-slate-300 tabular-nums">
+                            Question {currentQuestionIndex + 1} of {questions.length}
+                        </span>
+                    </div>
 
-                <div className="flex justify-between items-center relative z-10 w-full">
-                    {questions.map((q, idx) => {
-                        const isCurrent = idx === currentQuestionIndex;
-                        const isAnswered = !!answers[q.id]?.submittedAt;
-                        // Logic: Can jump to any answered question OR the first unanswered one
-                        const firstUnansweredIdx = questions.findIndex(qu => !answers[qu.id]?.submittedAt);
-                        const maxClickable = firstUnansweredIdx === -1 ? questions.length - 1 : firstUnansweredIdx;
-                        const isClickable = idx <= maxClickable;
+                    {/* Right: Percent & Exit */}
+                    <div className="flex items-center gap-6">
+                        <span className="text-sm font-bold text-blue-600 tracking-tight">
+                            {percentage}% Complete
+                        </span>
+                        <div className="w-px h-4 bg-slate-200 dark:bg-white/10" />
+                        <button
+                            onClick={handleExit}
+                            className="group flex items-center gap-2 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
+                            aria-label="Exit session"
+                        >
+                            <span className="text-xs font-medium text-slate-500 group-hover:text-slate-700 transition-colors">Exit Session</span>
+                            <X size={16} className="text-slate-400 group-hover:text-slate-600 transition-colors" />
+                        </button>
+                    </div>
+                </div>
 
-                        return (
-                            <button
-                                key={q.id}
-                                onClick={() => { if (isClickable) goToQuestion(idx); }}
-                                disabled={!isClickable}
-                                className={cn(
-                                    "relative flex items-center justify-center transition-all duration-200 text-sm border-2", // Removed font-medium/bold
-                                    // Active State: "Question #" - Blue Pills
-                                    isCurrent
-                                        ? "px-4 py-1 rounded-full bg-blue-50 border-blue-200 text-blue-600 shadow-sm"
-                                        : "w-8 h-8 rounded-full", // Circle for others
-
-                                    // Answered State: Green Circles (Border matches BG)
-                                    !isCurrent && isAnswered
-                                        ? "bg-emerald-100 border-emerald-100 text-emerald-700 hover:bg-emerald-200 hover:border-emerald-200"
-                                        : "",
-
-                                    // Future/Unanswered State: Muted Neutrals (Darker, Border matches BG)
-                                    !isCurrent && !isAnswered
-                                        ? isClickable
-                                            ? "bg-slate-200 border-slate-200 text-slate-600 hover:bg-slate-300 hover:border-slate-300" // Darker than slate-100
-                                            : "bg-slate-100 border-slate-100 text-slate-400 cursor-not-allowed"
-                                        : ""
-                                )}
-                            >
-                                {isCurrent ? (
-                                    <span className="text-xs tracking-tight">Question {idx + 1}</span> // Removed font-bold
-                                ) : (
-                                    <span className="text-xs">{idx + 1}</span>
-                                )}
-                            </button>
-                        );
-                    })}
+                {/* Bottom: Progress Bar */}
+                <div className="h-1.5 w-full bg-slate-100 dark:bg-neutral-800 rounded-full overflow-hidden shadow-inner">
+                    <div
+                        className="bg-blue-600 h-full transition-all duration-700 cubic-bezier(0.4, 0, 0.2, 1) rounded-full shadow-[0_0_10px_rgba(37,99,235,0.3)]"
+                        style={{ width: `${percentage}%` }}
+                    />
                 </div>
             </div>
         </header>

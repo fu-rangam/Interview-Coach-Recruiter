@@ -29,7 +29,7 @@ export function StepPreview({
     return (
         <div className="space-y-6">
             <div>
-                <h2 className="text-2xl font-bold">Step 3: Preview & Confirm</h2>
+                <h2 className="text-2xl font-bold font-display">Step 3: Preview & Confirm</h2>
                 <p className="text-muted-foreground">Review the final question set before generating the invite.</p>
             </div>
 

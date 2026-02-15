@@ -142,6 +142,8 @@ export interface InterviewSession {
         lastName: string;
         email: string;
     };
+    inviteToken?: string; // Persisted plain token for "Copy Link"
+    viewedAt?: number;
     engagedTimeSeconds?: number;
     intakeData?: Record<string, unknown>; // Full intake JSON for context
 }
@@ -154,4 +156,8 @@ export interface SessionSummary {
     createdAt: number;
     questionCount: number;
     answerCount: number;
+    submittedCount: number;
+    viewedAt?: number;
+    enteredInitials?: string;
+    inviteToken?: string;
 }
