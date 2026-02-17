@@ -34,7 +34,7 @@ export default function Home() {
 
                     {/* Tagline Lockup */}
                     <div className="flex flex-row items-center justify-center gap-[0.4rem] text-lg md:text-xl text-muted-foreground/80 font-medium tracking-wide">
-                        <span className="uppercase text-md md:text-base tracking-[0.2em] opacity-80 translate-y-[1px]">
+                        <span className="uppercase text-md md:text-base tracking-[0.1em] opacity-80 translate-y-[1px]">
                             Workforce Readiness Powered By
                         </span>
                         <div className="relative h-5 w-20 md:h-6 md:w-24">
