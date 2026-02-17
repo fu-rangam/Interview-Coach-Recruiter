@@ -34,9 +34,11 @@ export default function ActiveQuestionScreen({
         // updateSession, 
         trackEvent,
         engagementDebugEvents,
-        // clearDebugEvents,
+        clearDebugEvents,
         isEngagementWindowOpen,
-        engagementWindowTimeRemaining
+        engagementWindowTimeRemaining,
+        totalEngagedSeconds,
+        flushEngagement
     } = useSession();
 
     // compute currentAns locally for Revisit Mode logic
@@ -494,12 +496,13 @@ export default function ActiveQuestionScreen({
                 isVisible={showDebug}
                 onClose={() => setShowDebug(false)}
                 tracker={{
-                    totalEngagedSeconds: session?.engagedTimeSeconds || 0,
+                    totalEngagedSeconds: totalEngagedSeconds,
                     isWindowOpen: isEngagementWindowOpen,
                     trackEvent,
+                    flush: flushEngagement,
                     debugEvents: engagementDebugEvents,
                     windowTimeRemaining: engagementWindowTimeRemaining,
-                    clearDebugEvents: () => console.log("Clear events not hoisted")
+                    clearDebugEvents: clearDebugEvents
                 }}
             />
             <div
