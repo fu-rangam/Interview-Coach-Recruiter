@@ -5,18 +5,19 @@ import { createClient } from "@/lib/supabase/server";
 import { Invite } from "@/lib/domain/invite";
 import { z } from "zod";
 import { randomBytes } from "crypto";
+import { SupabaseClient } from "@supabase/supabase-js";
 
 const repository = new SupabaseInviteRepository();
 
 const CreateInviteSchema = z.object({
     role: z.string().min(1),
     jobDescription: z.string().optional(),
-    candidate: z.object({
+    candidates: z.array(z.object({
         firstName: z.string().min(1),
         lastName: z.string().min(1),
         email: z.string().email(),
         reqId: z.string().min(1)
-    }),
+    })).min(1),
     questions: z.array(z.object({
         text: z.string().min(1),
         category: z.string(),
@@ -29,49 +30,60 @@ export async function POST(request: Request) {
         const supabase = createClient();
         const { data: { user }, error } = await supabase.auth.getUser();
 
-        if (error || !user) {
+        let userId = user?.id;
+
+        if (error || !userId) {
             // Dev Bypass for mobile testing
             if (process.env.NODE_ENV === 'development') {
                 console.warn("⚠️ Bypass Auth for Dev Environment");
-                // Continue with fallback user id below
+                userId = "00000000-0000-0000-0000-000000000000";
             } else {
                 return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
             }
         }
 
-        const userId = user?.id || "00000000-0000-0000-0000-000000000000";
-
         const body = await request.json();
-        const { role, jobDescription, candidate, questions } = CreateInviteSchema.parse(body);
+        const { role, jobDescription, candidates, questions } = CreateInviteSchema.parse(body);
 
-        // Secure Random Token
-        const token = randomBytes(16).toString('hex');
-        const sessionId = uuidv7();
-
-        const invite: Invite = {
-            id: sessionId,
-            token,
-            role,
-            jobDescription,
-            candidate,
-            questions,
-            createdBy: userId,
-            createdAt: Date.now()
-        };
+        const results: { firstName: string, lastName: string, email: string, link: string }[] = [];
 
         // Use Admin Client if bypassing auth (RLS Bypass)
+        let adminClient: SupabaseClient | null = null;
         if (userId === "00000000-0000-0000-0000-000000000000") {
             const { createAdminClient } = await import("@/lib/supabase/server");
-            const adminClient = createAdminClient();
-            await repository.create(invite, adminClient);
-        } else {
-            await repository.create(invite);
+            adminClient = createAdminClient();
         }
 
-        return NextResponse.json({
-            invite,
-            link: `/s/${token}`
-        });
+        for (const candidate of candidates) {
+            const token = randomBytes(16).toString('hex');
+            const sessionId = uuidv7();
+
+            const invite: Invite = {
+                id: sessionId,
+                token,
+                role,
+                jobDescription,
+                candidate,
+                questions,
+                createdBy: userId,
+                createdAt: Date.now()
+            };
+
+            if (adminClient) {
+                await repository.create(invite, adminClient);
+            } else {
+                await repository.create(invite);
+            }
+
+            results.push({
+                firstName: candidate.firstName,
+                lastName: candidate.lastName,
+                email: candidate.email,
+                link: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/s/${token}`
+            });
+        }
+
+        return NextResponse.json({ results });
 
     } catch (error: unknown) {
         console.error("Invite Create Error:", error);

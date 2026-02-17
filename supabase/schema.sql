@@ -46,6 +46,8 @@ create table if not exists sessions (
   target_role text null,
   job_description text null,
   intake_json jsonb null,
+  readiness_band text null, -- Store RL1-RL4
+  summary_narrative text null,
 
   -- Optional optimistic concurrency / cache-busting
   version int not null default 1,

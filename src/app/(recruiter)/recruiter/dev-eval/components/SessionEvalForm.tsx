@@ -162,6 +162,11 @@ export function SessionEvalForm({ session }: SessionEvalFormProps) {
                                 debouncedSave(next);
                             }}
                         />
+                        <div className="ml-auto">
+                            <Badge variant="outline" className="bg-slate-100 text-slate-600 border-slate-200 text-[10px] font-bold">
+                                AGGREGATE READINESS: {session.readinessBand || 'N/A'}
+                            </Badge>
+                        </div>
                     </div>
                     <textarea
                         className="flex min-h-[80px] w-full rounded-md border bg-white px-3 py-2 text-sm placeholder:text-muted-foreground/70 focus:outline-none focus:ring-1 focus:ring-violet-300 focus:border-violet-300"
@@ -173,6 +178,15 @@ export function SessionEvalForm({ session }: SessionEvalFormProps) {
                             debouncedSave(next);
                         }}
                     />
+
+                    {session.summaryNarrative && (
+                        <div className="pt-2">
+                            <h4 className="text-xs font-bold text-violet-600 uppercase tracking-wider mb-1">AI Generated Summary Narrative</h4>
+                            <div className="bg-white/60 p-3 rounded border border-violet-100 text-xs text-slate-600 leading-relaxed italic">
+                                &ldquo;{session.summaryNarrative}&rdquo;
+                            </div>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
 
@@ -234,6 +248,13 @@ export function SessionEvalForm({ session }: SessionEvalFormProps) {
                                         <p className="text-sm text-blue-900">
                                             <strong>Next Action:</strong> {answer.analysis.nextAction.label} ({answer.analysis.nextAction.actionType})
                                         </p>
+                                    )}
+                                    {answer.analysis.readinessBand && (
+                                        <div className="pt-1">
+                                            <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-200 text-[10px] font-bold">
+                                                AI READINESS: {answer.analysis.readinessBand}
+                                            </Badge>
+                                        </div>
                                     )}
                                 </div>
                             )}

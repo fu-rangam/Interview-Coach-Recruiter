@@ -34,6 +34,11 @@ export const EVAL_RUBRIC_DIMENSIONS = [
         description: 'Is the language appropriately calibrated for the role level (entry-level vs senior)?'
     },
     {
+        id: 'readiness_level_accuracy',
+        label: 'Readiness Level Accuracy',
+        description: 'Does the assigned Readiness Level (RL1-RL4) accurately reflect the candidate’s performance based on the evidence?'
+    },
+    {
         id: 'overall_quality',
         label: 'Overall Session Quality',
         description: 'Holistic rating of the entire session experience for this question.'

@@ -110,3 +110,37 @@ export function submitInitials(session: InterviewSession, initials: string): Int
         initialsRequired: false // Gate passed
     };
 }
+
+export function cloneSession(parent: InterviewSession): InterviewSession {
+    const newSession: InterviewSession = {
+        id: uuidv7(),
+        status: "NOT_STARTED",
+        role: parent.role,
+        jobDescription: parent.jobDescription,
+        recruiterId: parent.recruiterId, // Propagate ownership
+        clientName: parent.clientName, // Propagate client
+        // Deep clone questions with fresh UUIDs to avoid primary key collision/moving
+        questions: parent.questions.map(q => ({
+            ...q,
+            id: uuidv7()
+        })),
+        currentQuestionIndex: 0,
+        answers: {},
+        initialsRequired: !parent.candidateName,
+        // Identity Propagation
+        candidateName: parent.candidateName,
+        candidate: parent.candidate,
+        enteredInitials: parent.enteredInitials,
+        // Lineage
+        parentSessionId: parent.id,
+        attemptNumber: (parent.attemptNumber || 1) + 1,
+        intakeData: parent.intakeData // Keep original context
+    };
+
+    // If we have identity, we don't need the gate
+    if (newSession.candidateName || newSession.enteredInitials) {
+        newSession.initialsRequired = false;
+    }
+
+    return newSession;
+}

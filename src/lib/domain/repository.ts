@@ -1,9 +1,10 @@
-import { InterviewSession, SessionSummary } from "./types";
+import { InterviewSession, SessionSummary, SessionDashboardMetrics } from "./types";
 
 export interface SessionRepository {
     create(session: InterviewSession): Promise<void>;
     get(id: string): Promise<InterviewSession | null>;
     listByRecruiter(recruiterId: string): Promise<SessionSummary[]>;
+    getDashboardMetrics(recruiterId: string): Promise<SessionDashboardMetrics>;
     update(session: InterviewSession): Promise<void>;
     saveDraft(sessionId: string, questionId: string, draftText: string): Promise<void>;
     updatePartial(id: string, updates: Partial<InterviewSession>): Promise<void>;

@@ -8,6 +8,7 @@ import { useAudioRecording } from "@/features/audio/hooks/useAudioRecording";
 import { useTextToSpeech } from "@/features/audio/hooks/useTextToSpeech";
 import { SessionHeader } from './SessionHeader';
 import { FeedbackDrawer } from './FeedbackDrawer';
+import { MultiStepLoader } from './MultiStepLoader';
 import AudioVisualizer from '@/features/audio/components/AudioVisualizer';
 import { TipsAccordion } from './TipsAccordion';
 import { StrongResponseAccordion } from './StrongResponseAccordion';
@@ -59,8 +60,22 @@ export default function UnifiedSessionScreen() {
     const [strongResponseOpen, setStrongResponseOpen] = useState(false);
     const [showDebug, setShowDebug] = useState(false);
 
+    // Multistep Loader State
+    const [showLoader, setShowLoader] = useState(false);
+    const [loaderComplete, setLoaderComplete] = useState(false);
+
     // Refs
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const mobilePanelRef = useRef<HTMLDivElement>(null);
+    const desktopPanelRef = useRef<HTMLDivElement>(null);
+
+    // Side Panel Auto-Scroll
+    useEffect(() => {
+        if (hintOpen || strongResponseOpen) {
+            mobilePanelRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+            desktopPanelRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    }, [hintOpen, strongResponseOpen]);
 
     // Hooks
     const { hints, isLoading: isHintLoading, fetchHints } = useSmartHints(
@@ -95,10 +110,19 @@ export default function UnifiedSessionScreen() {
 
     // Effects
     useEffect(() => {
-        if (isReviewing) {
-            setIsDrawerOpen(true);
+        if (isThinking) {
+            setShowLoader(true);
+            setLoaderComplete(false);
+            setIsDrawerOpen(false);
         }
-    }, [isReviewing]);
+    }, [isThinking]);
+
+    useEffect(() => {
+        if (isReviewing && loaderComplete) {
+            setIsDrawerOpen(true);
+            setShowLoader(false);
+        }
+    }, [isReviewing, loaderComplete]);
 
     // Mic Warm-up Optimization
     useEffect(() => {
@@ -151,15 +175,17 @@ export default function UnifiedSessionScreen() {
     };
 
     const handleSubmit = async () => {
-        const finalAnswer = mode === 'voice' ? (transcript || answerText) : answerText;
+        const finalAnswer = mode === 'voice' ? transcript : answerText;
         if (!finalAnswer.trim()) return;
 
         trackEvent('tier3', 'answer_submit');
         if (currentQuestionId) {
+            // saveAnswer in context is a wrapper for actions.submit
             await saveAnswer(currentQuestionId, {
                 text: finalAnswer,
                 analysis: null,
-                transcript: mode === 'voice' ? finalAnswer : undefined
+                transcript: mode === 'voice' ? finalAnswer : undefined,
+                audioBlob: mode === 'voice' ? (audioBlob || undefined) : undefined
             });
         }
 
@@ -167,7 +193,6 @@ export default function UnifiedSessionScreen() {
         if (mode === 'voice') {
             stopListening();
             resetTranscript();
-            resetAudio();
         } else {
             setAnswerText('');
         }
@@ -222,7 +247,7 @@ export default function UnifiedSessionScreen() {
                                 "grow-0 shrink-0 p-4 md:p-6 lg:p-10 w-full transition-all duration-500 ease-in-out cursor-default",
                                 isReviewing ? "opacity-30 scale-[0.98] pointer-events-none blur-sm" : "opacity-100 scale-100"
                             )}>
-                            <div className="glass-card text-slate-900 dark:text-white rounded-3xl p-6 md:p-10 w-full relative overflow-hidden transition-all duration-300 ring-1 ring-white/20 bg-gradient-to-br from-[#e8f1fd] to-[#d1e3fa]">
+                            <div className="glass-card text-slate-900 dark:text-white rounded-3xl p-6 md:p-10 w-full relative transition-all duration-300 ring-1 ring-white/20 bg-gradient-to-br from-[#e8f1fd] to-[#d1e3fa]">
                                 <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-200 to-blue-600" />
 
                                 <div className="flex justify-start mb-6">
@@ -320,18 +345,18 @@ export default function UnifiedSessionScreen() {
                                                 </button>
                                             </div>
                                         )}
+                                    </div>
 
+                                    <div className="flex-1 flex justify-end">
                                         <button
                                             onClick={handleTogglePlayback}
                                             disabled={isTTSLoading}
-                                            className="p-3 rounded-2xl bg-white/30 dark:bg-white/5 backdrop-blur-md shadow-md border border-white/30 hover:bg-slate-50 dark:hover:bg-white/10 text-primary dark:text-slate-300 transition-all dark:border-white/5"
+                                            className="p-2 rounded-xl bg-blue-600 text-white backdrop-blur-md shadow-md border border-white/30 hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                                             aria-label={isPlaying ? "Stop reading" : "Read question"}
                                         >
-                                            {isPlaying ? <StopCircle size={18} className="animate-pulse text-red-500" /> : <Play size={18} />}
+                                            {isPlaying ? <StopCircle size={18} className="animate-pulse text-white/90" /> : <Play size={18} className="text-white" />}
                                         </button>
                                     </div>
-
-                                    <div className="flex-1 flex justify-end" />
                                 </div>
                             </div>
                         </div>
@@ -366,17 +391,6 @@ export default function UnifiedSessionScreen() {
                                 </div>
                             )}
 
-                            {(isReviewing || hasSubmitted) && (
-                                <div className="flex-1 flex flex-col items-center justify-center text-center space-y-6 px-6 animate-in fade-in slide-in-from-bottom-8 duration-700">
-                                    <div className="w-20 h-20 bg-blue-600/10 text-blue-600 dark:text-blue-400 rounded-3xl flex items-center justify-center mb-2 rotate-3 border border-blue-500/20 shadow-inner">
-                                        <ArrowRight size={40} />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Answer Submitted</h3>
-                                        <p className="text-sm font-medium text-slate-400 uppercase tracking-widest">Awaiting coaching feedback...</p>
-                                    </div>
-                                </div>
-                            )}
                         </div>
 
                         {/* Footer: Inside main column so it squeezes with sidebar */}
@@ -438,23 +452,7 @@ export default function UnifiedSessionScreen() {
                                             </Button>
                                         </div>
                                     )
-                                ) : (
-                                    <div className="flex flex-col md:flex-row gap-4 justify-center items-center">
-                                        <Button
-                                            onClick={handleRetry}
-                                            variant="outline"
-                                            className="w-full md:w-auto px-10 h-16 rounded-2xl border-slate-200 dark:border-white/10 text-slate-700 dark:text-white hover:bg-slate-50 dark:hover:bg-white/5"
-                                        >
-                                            Try Again
-                                        </Button>
-                                        <Button
-                                            onClick={handleNext}
-                                            className="w-full md:w-auto px-12 h-16 rounded-2xl bg-blue-600 hover:bg-blue-700 shadow-xl text-xl font-bold"
-                                        >
-                                            Next Question
-                                        </Button>
-                                    </div>
-                                )}
+                                ) : null}
                             </div>
                         </footer>
                     </div>
@@ -471,7 +469,10 @@ export default function UnifiedSessionScreen() {
                             className="hidden lg:flex flex-col border-l border-slate-200 dark:border-white/5 glass-overlay overflow-hidden shadow-2xl"
                         >
                             <div className="min-w-[400px] h-full flex flex-col">
-                                <div className="flex-1 overflow-y-auto p-8 space-y-8">
+                                <div
+                                    ref={desktopPanelRef}
+                                    className="flex-1 overflow-y-auto p-8 space-y-8"
+                                >
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-3">
                                             <div className={cn(
@@ -509,18 +510,33 @@ export default function UnifiedSessionScreen() {
                 <AnimatePresence>
                     {(hintOpen || strongResponseOpen) && (
                         <motion.div
-                            initial={{ height: 0 }}
-                            animate={{ height: "auto" }}
-                            exit={{ height: 0 }}
-                            className="lg:hidden w-full absolute bottom-0 left-0 right-0 glass-overlay border-t border-slate-200 dark:border-white/5 overflow-hidden z-30"
+                            initial={{ y: "100%" }}
+                            animate={{ y: 0 }}
+                            exit={{ y: "100%" }}
+                            transition={{ type: "spring", damping: 30, stiffness: 250 }}
+                            className="lg:hidden fixed bottom-0 left-0 right-0 glass-overlay border-t border-slate-200 dark:border-white/10 z-[60] flex flex-col max-h-[85vh] rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.15)]"
                         >
-                            <div className="p-6 space-y-6">
-                                <div className="flex items-center justify-between">
-                                    <span className="font-bold text-sm uppercase tracking-wider text-slate-400">
-                                        {hintOpen ? "Hints" : "Example"}
-                                    </span>
-                                    <button onClick={() => { setHintOpen(false); setStrongResponseOpen(false); }}><X size={18} /></button>
-                                </div>
+                            {/* Drag Indicator */}
+                            <div className="w-12 h-1.5 bg-slate-300 dark:bg-white/10 rounded-full mx-auto my-3 shrink-0" />
+
+                            {/* Fixed Header */}
+                            <div className="px-6 pb-4 flex items-center justify-between shrink-0 border-b border-slate-100 dark:border-white/5">
+                                <span className="font-black text-sm uppercase tracking-[0.2em] text-slate-400 dark:text-white/40">
+                                    {hintOpen ? "Supportive Hints" : "Example Response"}
+                                </span>
+                                <button
+                                    onClick={() => { setHintOpen(false); setStrongResponseOpen(false); }}
+                                    className="p-2 bg-slate-100 dark:bg-white/5 rounded-full text-slate-500 hover:bg-slate-200 transition-colors"
+                                >
+                                    <X size={18} />
+                                </button>
+                            </div>
+
+                            {/* Scrollable Content */}
+                            <div
+                                ref={mobilePanelRef}
+                                className="flex-1 overflow-y-auto p-6 pt-2 space-y-6"
+                            >
                                 {hintOpen && <TipsAccordion tips={hints} isLoading={isHintLoading} />}
                                 {strongResponseOpen && (
                                     <StrongResponseAccordion
@@ -528,11 +544,33 @@ export default function UnifiedSessionScreen() {
                                         isLoading={isStrongResponseLoading}
                                     />
                                 )}
+                                {/* Bottom padding for mobile browser bars */}
+                                <div className="h-8 shrink-0" />
                             </div>
                         </motion.div>
                     )}
                 </AnimatePresence>
             </main>
+
+            <MultiStepLoader
+                loading={showLoader}
+                duration={mode === 'voice' ? 2500 : 3000}
+                onComplete={() => setLoaderComplete(true)}
+                loadingStates={
+                    mode === 'voice'
+                        ? [
+                            { text: 'Coach is analyzing your answer...' },
+                            { text: 'Generating feedback...' },
+                            { text: 'Noting your speaking delivery...' },
+                            { text: 'Finalizing review...' },
+                        ]
+                        : [
+                            { text: 'Coach is analyzing your answer...' },
+                            { text: 'Generating feedback...' },
+                            { text: 'Finalizing review...' },
+                        ]
+                }
+            />
 
             <FeedbackDrawer
                 isOpen={isDrawerOpen}
@@ -540,7 +578,6 @@ export default function UnifiedSessionScreen() {
                 isThinking={isThinking}
                 onNext={handleNext}
                 onRetry={handleRetry}
-                onClose={() => setIsDrawerOpen(false)}
                 onStop={handleStop}
                 isLastQuestion={currentQuestionIndex === (session?.questions.length ?? 0) - 1}
                 transcript={answerData?.transcript || (mode === 'voice' ? transcript : answerText)}

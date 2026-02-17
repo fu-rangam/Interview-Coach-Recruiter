@@ -33,17 +33,8 @@ export function CategoryTooltip({ category, children }: CategoryTooltipProps) {
     const info = CATEGORY_DEFINITIONS[upperCategory] || CATEGORY_DEFINITIONS.OTHER;
 
     // Handlers for Desktop Hover
-    const onMouseEnter = () => {
-        // Only trigger on mouse-capable devices
-        if (window.matchMedia('(hover: hover)').matches) {
-            setIsVisible(true);
-        }
-    };
-    const onMouseLeave = () => {
-        if (window.matchMedia('(hover: hover)').matches) {
-            setIsVisible(false);
-        }
-    };
+    const onMouseEnter = () => setIsVisible(true);
+    const onMouseLeave = () => setIsVisible(false);
 
     const handleClick = (e: React.MouseEvent) => {
         // Toggle behavior for mobile/touch or explicit click

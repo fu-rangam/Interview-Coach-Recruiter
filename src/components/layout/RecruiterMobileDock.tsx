@@ -4,7 +4,7 @@ import { useScroll, motion, useMotionValueEvent } from "framer-motion";
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Plus, List, Users, Settings, LogOut } from "lucide-react";
+import { Plus, List, Settings, LogOut, LayoutTemplate } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { createBrowserClient } from "@supabase/ssr";
 import { useRouter } from "next/navigation";
@@ -45,7 +45,7 @@ export function RecruiterMobileDock() {
     const navItems = [
         { icon: Plus, label: "Create", href: "/recruiter/create" },
         { icon: List, label: "Invites & Sessions", href: "/recruiter" },
-        { icon: Users, label: "Candidates", href: "#" }, // Placeholder
+        { icon: LayoutTemplate, label: "Templates", href: "/recruiter/templates" },
         { icon: Settings, label: "Settings", href: "/recruiter/settings" },
     ];
 

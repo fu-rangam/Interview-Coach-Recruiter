@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Search, ArrowUpDown, Copy, Trash2, CheckCircle2 } from "lucide-react";
+import { Search, ArrowUpDown, Copy, Trash2, CheckCircle2, ChevronDown, ChevronRight, History } from "lucide-react";
 import { SessionSummary } from "@/lib/domain/types";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -72,12 +72,56 @@ function getStatusBadge(session: SessionSummary) {
     </Badge>;
 }
 
+import { ReadinessTooltip } from "./ReadinessTooltip";
+
+function getReadinessBadge(session: SessionSummary) {
+    const rl = session.readinessBand;
+    if (!rl && !session.summaryNarrative) return <span className="text-slate-300 text-xs">—</span>;
+
+    const commonClasses = "w-[125px] justify-center text-center text-[10px] uppercase font-bold tracking-tight";
+
+    let badge;
+    switch (rl) {
+        case 'RL1':
+            badge = <Badge variant="outline" className={`${commonClasses} text-emerald-700 border-emerald-200 bg-emerald-50`}>Ready</Badge>;
+            break;
+        case 'RL2':
+            badge = <Badge variant="outline" className={`${commonClasses} text-blue-700 border-blue-200 bg-blue-50`}>Strong Potential</Badge>;
+            break;
+        case 'RL3':
+            badge = <Badge variant="outline" className={`${commonClasses} text-amber-700 border-amber-200 bg-amber-50`}>Practice Recommended</Badge>;
+            break;
+        case 'RL4':
+            badge = <Badge variant="outline" className={`${commonClasses} text-slate-500 border-slate-200 bg-slate-50`}>Incomplete</Badge>;
+            break;
+        default:
+            badge = <Badge variant="outline" className={`${commonClasses} text-slate-400 border-slate-200`}>Analyzing...</Badge>;
+    }
+
+    return (
+        <ReadinessTooltip narrative={session.summaryNarrative}>
+            {badge}
+        </ReadinessTooltip>
+    );
+}
+
 export function RecruiterSessionsTable({ initialSessions, recruiterTimezone }: RecruiterSessionsTableProps) {
     const router = useRouter();
     const [searchQuery, setSearchQuery] = useState("");
     const [sortConfig, setSortConfig] = useState<SortConfig>(null);
     const [copiedId, setCopiedId] = useState<string | null>(null);
     const [isDeleting, setIsDeleting] = useState<string | null>(null);
+    const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+
+    const toggleExpand = (id: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        setExpandedIds(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+        });
+    };
 
     const handleSort = (key: keyof SessionSummary | 'created') => {
         setSortConfig(prev => {
@@ -90,9 +134,33 @@ export function RecruiterSessionsTable({ initialSessions, recruiterTimezone }: R
 
     const handleCopyLink = async (token: string, sessionId: string) => {
         const link = `${window.location.origin}/s/${token}`;
-        await navigator.clipboard.writeText(link);
-        setCopiedId(sessionId);
-        setTimeout(() => setCopiedId(null), 2000);
+
+        try {
+            // Navigator clipboard api needs a secure context (https)
+            if (navigator.clipboard && window.isSecureContext) {
+                await navigator.clipboard.writeText(link);
+            } else {
+                // Fallback for non-secure contexts (http/local network)
+                const textArea = document.createElement("textarea");
+                textArea.value = link;
+                textArea.style.position = "fixed";
+                textArea.style.left = "-9999px";
+                textArea.style.top = "0";
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                } catch (err) {
+                    console.error('Fallback: Oops, unable to copy', err);
+                }
+                document.body.removeChild(textArea);
+            }
+            setCopiedId(sessionId);
+            setTimeout(() => setCopiedId(null), 2000);
+        } catch (err) {
+            console.error('Async: Could not copy text: ', err);
+        }
     };
 
     // Re-fetch data whenever the tab regains focus (covers back-navigation, tab switching, etc.)
@@ -217,6 +285,14 @@ export function RecruiterSessionsTable({ initialSessions, recruiterTimezone }: R
                             </TableHead>
                             <TableHead>
                                 <button
+                                    onClick={() => handleSort('readinessBand')}
+                                    className="flex items-center gap-1 hover:text-slate-900 transition-colors uppercase text-[11px] font-bold tracking-wider text-slate-500"
+                                >
+                                    Readiness <ArrowUpDown className="w-3 h-3" />
+                                </button>
+                            </TableHead>
+                            <TableHead>
+                                <button
                                     onClick={() => handleSort('created')}
                                     className="flex items-center gap-1 hover:text-slate-900 transition-colors uppercase text-[11px] font-bold tracking-wider text-slate-500"
                                 >
@@ -236,63 +312,131 @@ export function RecruiterSessionsTable({ initialSessions, recruiterTimezone }: R
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            filteredAndSortedSessions.map((session) => (
-                                <TableRow
-                                    key={session.id}
-                                    className="group cursor-pointer hover:bg-blue-50/40 transition-colors border-b border-slate-100 last:border-0"
-                                    onClick={() => router.push(`/recruiter/sessions/${session.id}`)}
-                                >
-                                    <TableCell className="font-semibold text-slate-900 py-4">
-                                        {session.candidateName}
-                                    </TableCell>
-                                    <TableCell className="text-slate-600">{session.role}</TableCell>
-                                    <TableCell>{getStatusBadge(session)}</TableCell>
-                                    <TableCell className="text-slate-500 whitespace-nowrap text-sm">
-                                        {formatTimestamp(session.createdAt)}
-                                    </TableCell>
-                                    <TableCell className="text-right px-6" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
-                                        <div className="flex items-center justify-end gap-1">
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                asChild
-                                                className="text-primary hover:text-primary hover:bg-primary/5 transition-colors font-medium h-8"
-                                            >
-                                                <Link href={`/recruiter/sessions/${session.id}`}>
-                                                    View Results
-                                                </Link>
-                                            </Button>
+                            filteredAndSortedSessions.map((session) => {
+                                const hasAttempts = session.attempts && session.attempts.length > 0;
+                                const isExpanded = expandedIds.has(session.id);
 
-                                            {session.inviteToken && (
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-8 w-8 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors"
-                                                    title="Copy Invite Link"
-                                                    onClick={() => handleCopyLink(session.inviteToken!, session.id)}
-                                                >
-                                                    {copiedId === session.id ? (
-                                                        <CheckCircle2 className="h-4 w-4 text-emerald-600 animate-in zoom-in-50" />
-                                                    ) : (
-                                                        <Copy className="h-4 w-4" />
+                                return (
+                                    <React.Fragment key={session.id}>
+                                        <TableRow
+                                            className="group cursor-pointer hover:bg-blue-50/40 transition-colors border-b border-slate-100 last:border-0"
+                                            onClick={() => router.push(`/recruiter/sessions/${session.id}`)}
+                                        >
+                                            <TableCell className="font-semibold text-slate-900 py-4">
+                                                <div className="flex items-center gap-2">
+                                                    {hasAttempts && (
+                                                        <button
+                                                            onClick={(e) => toggleExpand(session.id, e)}
+                                                            className="p-1 hover:bg-slate-200 rounded transition-colors text-slate-400"
+                                                        >
+                                                            {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                                                        </button>
                                                     )}
-                                                </Button>
-                                            )}
+                                                    <div className="flex flex-col">
+                                                        <div className="flex items-center gap-2">
+                                                            <span>{session.candidateName}</span>
+                                                            {hasAttempts && (
+                                                                <Badge variant="outline" className="text-[10px] h-4 px-1 bg-slate-100 border-slate-200 text-slate-600">
+                                                                    {session.attempts!.length + 1} Attempts
+                                                                </Badge>
+                                                            )}
+                                                        </div>
+                                                        {session.attemptNumber && session.attemptNumber > 1 && (
+                                                            <span className="text-[10px] font-bold text-blue-600 uppercase tracking-tight">
+                                                                Attempt #{session.attemptNumber}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="text-slate-600">{session.role}</TableCell>
+                                            <TableCell>{getStatusBadge(session)}</TableCell>
+                                            <TableCell className="text-center">{getReadinessBadge(session)}</TableCell>
+                                            <TableCell className="text-slate-500 whitespace-nowrap text-sm">
+                                                {formatTimestamp(session.createdAt)}
+                                            </TableCell>
+                                            <TableCell className="text-right px-6" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+                                                <div className="flex items-center justify-end gap-1">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        asChild
+                                                        className="text-primary hover:text-primary hover:bg-primary/5 transition-colors font-medium h-8"
+                                                    >
+                                                        <Link href={`/recruiter/sessions/${session.id}`}>
+                                                            View Results
+                                                        </Link>
+                                                    </Button>
 
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-8 w-8 text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                                                title="Delete Session"
-                                                disabled={isDeleting === session.id}
-                                                onClick={() => handleDelete(session.id)}
+                                                    {session.inviteToken && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-8 w-8 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors"
+                                                            title="Copy Invite Link"
+                                                            onClick={() => handleCopyLink(session.inviteToken!, session.id)}
+                                                        >
+                                                            {copiedId === session.id ? (
+                                                                <CheckCircle2 className="h-4 w-4 text-emerald-600 animate-in zoom-in-50" />
+                                                            ) : (
+                                                                <Copy className="h-4 w-4" />
+                                                            )}
+                                                        </Button>
+                                                    )}
+
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8 text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                                        title="Delete Session"
+                                                        disabled={isDeleting === session.id}
+                                                        onClick={() => handleDelete(session.id)}
+                                                    >
+                                                        <Trash2 className={isDeleting === session.id ? "h-4 w-4 animate-pulse" : "h-4 w-4"} />
+                                                    </Button>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+
+                                        {/* Nested Attempts */}
+                                        {isExpanded && session.attempts?.map((attempt) => (
+                                            <TableRow
+                                                key={attempt.id}
+                                                className="bg-slate-50/50 hover:bg-blue-50/30 transition-colors border-b border-slate-100 cursor-pointer"
+                                                onClick={() => router.push(`/recruiter/sessions/${attempt.id}`)}
                                             >
-                                                <Trash2 className={isDeleting === session.id ? "h-4 w-4 animate-pulse" : "h-4 w-4"} />
-                                            </Button>
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            ))
+                                                <TableCell className="py-3 pl-10">
+                                                    <div className="flex items-center gap-2">
+                                                        <History className="w-3 h-3 text-slate-400" />
+                                                        <div className="flex flex-col">
+                                                            <span className="text-sm font-medium text-slate-700">Attempt #{attempt.attemptNumber}</span>
+                                                            <span className="text-[10px] text-slate-400">ID: {attempt.id.slice(0, 8)}...</span>
+                                                        </div>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="text-slate-500 text-sm italic">Same as parent</TableCell>
+                                                <TableCell>{getStatusBadge(attempt)}</TableCell>
+                                                <TableCell className="text-center">{getReadinessBadge(attempt)}</TableCell>
+                                                <TableCell className="text-slate-400 text-xs">
+                                                    {formatTimestamp(attempt.createdAt)}
+                                                </TableCell>
+                                                <TableCell className="text-right px-6" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        asChild
+                                                        className="text-slate-500 hover:text-primary hover:bg-primary/5 transition-colors font-medium h-7 text-xs"
+                                                    >
+                                                        <Link href={`/recruiter/sessions/${attempt.id}`}>
+                                                            Review
+                                                        </Link>
+                                                    </Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </React.Fragment>
+                                );
+                            })
                         )}
                     </TableBody>
                 </Table>

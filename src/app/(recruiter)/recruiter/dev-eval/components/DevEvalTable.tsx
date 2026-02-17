@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Download, Eye, CheckSquare, Square } from 'lucide-react';
+import { Download, Eye, CheckSquare, Square, ChevronDown, ChevronRight, History } from 'lucide-react';
 import { SessionSummary } from '@/lib/domain/types';
 import { SessionEval, ExportSessionPayload } from '../types';
 import { buildBatchPayload, downloadJson } from '../export-utils';
@@ -52,6 +52,17 @@ export function DevEvalTable({ sessions }: DevEvalTableProps) {
     const router = useRouter();
     const [selected, setSelected] = useState<Set<string>>(new Set());
     const [isExporting, setIsExporting] = useState(false);
+    const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+
+    const toggleExpand = (id: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        setExpandedIds(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+        });
+    };
 
     const completedSessions = useMemo(
         () => sessions.filter(s => s.status === 'COMPLETED' || s.submittedCount > 0 || s.answerCount > 0),
@@ -177,49 +188,105 @@ export function DevEvalTable({ sessions }: DevEvalTableProps) {
                         {completedSessions.map(session => {
                             const isSelected = selected.has(session.id);
                             const { hasEval, score } = getEvalIndicator(session.id);
+                            const hasAttempts = session.attempts && session.attempts.length > 0;
+                            const isExpanded = expandedIds.has(session.id);
 
                             return (
-                                <TableRow
-                                    key={session.id}
-                                    className={`${isSelected ? 'bg-violet-50/50' : ''} hover:bg-slate-50 transition-colors`}
-                                >
-                                    <TableCell className="text-center">
-                                        <button onClick={() => toggleSelect(session.id)} className="p-1 hover:bg-slate-200 rounded transition-colors">
-                                            {isSelected
-                                                ? <CheckSquare className="w-4 h-4 text-violet-600" />
-                                                : <Square className="w-4 h-4 text-slate-300" />
-                                            }
-                                        </button>
-                                    </TableCell>
-                                    <TableCell className="font-medium text-slate-900">
-                                        {session.candidateName}
-                                    </TableCell>
-                                    <TableCell className="text-slate-600 text-sm">
-                                        {session.role}
-                                    </TableCell>
-                                    <TableCell className="text-center">
-                                        {getStatusBadge(session)}
-                                    </TableCell>
-                                    <TableCell className="text-center">
-                                        {hasEval ? (
-                                            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
-                                                ★ {score}/5
-                                            </Badge>
-                                        ) : (
-                                            <span className="text-xs text-slate-400">—</span>
-                                        )}
-                                    </TableCell>
-                                    <TableCell className="text-center">
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => router.push(`/recruiter/dev-eval/${session.id}`)}
-                                            className="text-violet-600 hover:text-violet-700 hover:bg-violet-50"
+                                <React.Fragment key={session.id}>
+                                    <TableRow
+                                        className={`${isSelected ? 'bg-violet-50/50' : ''} hover:bg-slate-50 transition-colors cursor-pointer`}
+                                        onClick={() => router.push(`/recruiter/dev-eval/${session.id}`)}
+                                    >
+                                        <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                                            <button onClick={() => toggleSelect(session.id)} className="p-1 hover:bg-slate-200 rounded transition-colors">
+                                                {isSelected
+                                                    ? <CheckSquare className="w-4 h-4 text-violet-600" />
+                                                    : <Square className="w-4 h-4 text-slate-300" />
+                                                }
+                                            </button>
+                                        </TableCell>
+                                        <TableCell className="font-medium text-slate-900">
+                                            <div className="flex items-center gap-2">
+                                                {hasAttempts && (
+                                                    <button
+                                                        onClick={(e) => toggleExpand(session.id, e)}
+                                                        className="p-1 hover:bg-slate-200 rounded transition-colors text-slate-400"
+                                                    >
+                                                        {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                                                    </button>
+                                                )}
+                                                <div className="flex flex-col">
+                                                    <span>{session.candidateName}</span>
+                                                    {session.attemptNumber && session.attemptNumber > 1 && (
+                                                        <span className="text-[10px] font-bold text-violet-500 uppercase tracking-tight">
+                                                            Attempt #{session.attemptNumber}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="text-slate-600 text-sm">
+                                            {session.role}
+                                        </TableCell>
+                                        <TableCell className="text-center">
+                                            {getStatusBadge(session)}
+                                        </TableCell>
+                                        <TableCell className="text-center">
+                                            {hasEval ? (
+                                                <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
+                                                    ★ {score}/5
+                                                </Badge>
+                                            ) : (
+                                                <span className="text-xs text-slate-400">—</span>
+                                            )}
+                                        </TableCell>
+                                        <TableCell className="text-center">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => router.push(`/recruiter/dev-eval/${session.id}`)}
+                                                className="text-violet-600 hover:text-violet-700 hover:bg-violet-50"
+                                            >
+                                                <Eye className="w-4 h-4 mr-1" /> Evaluate
+                                            </Button>
+                                        </TableCell>
+                                    </TableRow>
+
+                                    {/* Nested Attempts */}
+                                    {isExpanded && session.attempts?.map((attempt) => (
+                                        <TableRow
+                                            key={attempt.id}
+                                            className="bg-slate-50/30 hover:bg-violet-50/30 transition-colors border-b border-slate-100 cursor-pointer"
+                                            onClick={() => router.push(`/recruiter/dev-eval/${attempt.id}`)}
                                         >
-                                            <Eye className="w-4 h-4 mr-1" /> Evaluate
-                                        </Button>
-                                    </TableCell>
-                                </TableRow>
+                                            <TableCell />
+                                            <TableCell className="py-2 pl-10">
+                                                <div className="flex items-center gap-2">
+                                                    <History className="w-3 h-3 text-slate-400" />
+                                                    <div className="flex flex-col">
+                                                        <span className="text-sm font-medium text-slate-600">Attempt #{attempt.attemptNumber}</span>
+                                                        <span className="text-[10px] text-slate-400">{new Date(attempt.createdAt).toLocaleDateString()}</span>
+                                                    </div>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="text-xs text-slate-400 italic">Lineage split</TableCell>
+                                            <TableCell className="text-center">{getStatusBadge(attempt)}</TableCell>
+                                            <TableCell className="text-center">
+                                                {getEvalIndicator(attempt.id).hasEval ? '★' : '—'}
+                                            </TableCell>
+                                            <TableCell className="text-center">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="h-7 text-xs text-violet-500"
+                                                    onClick={() => router.push(`/recruiter/dev-eval/${attempt.id}`)}
+                                                >
+                                                    Evaluate
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </React.Fragment>
                             );
                         })}
                     </TableBody>

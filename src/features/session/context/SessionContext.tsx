@@ -13,7 +13,7 @@ export interface OnboardingIntakeV1 {
 
 export interface SessionContextType {
     // Legacy State (Mapped to Core where possible)
-    session?: InterviewSession;
+    session?: InterviewSession | null;
     startSession: (
         role: string,
         jobDescription?: string,
@@ -51,7 +51,7 @@ export interface SessionContextType {
     isEngagementWindowOpen: boolean;
     engagementWindowTimeRemaining: number;
     clearDebugEvents: () => void;
-    createNewSession: (role: string) => Promise<{ sessionId: string; candidateToken: string }>;
+    createNewSession: (role: string, parentId?: string) => Promise<{ sessionId: string; candidateToken: string }>;
 }
 
 export const SessionContext = createContext<SessionContextType | undefined>(undefined);
@@ -87,17 +87,11 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
 
     // The Core Hook manages the state
     const { session, now, actions } = useDomainSession(sessionId, candidateToken);
-
     // Bootstrap on mount
     useEffect(() => {
         if (!now.isLoaded && !sessionId) {
             // Only auto-init new session if we aren't loading an existing one (e.g. via Invite)
             const role = initialConfig?.role || "Product Manager";
-            // If we have candidate info in initialConfig, we can't easily pass it to specific init() yet without updating init signature or relying on backend to have it from invite.
-            // Actually, if sessionId is provided, useDomainSession fetches it. The initialConfig here is mostly for NEW sessions.
-            // But for Invites, the session ALREADY EXISTS in DB (created by Invite logic).
-            // So actions.init() is NOT called.
-            // The issue is simply that useDomainSession needs to return the candidate data it fetched.
             actions.init(role);
         }
     }, [now.isLoaded, actions, initialConfig, sessionId]);
@@ -126,8 +120,8 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
         actions.retry(context);
     };
 
-    const saveAnswer = async (_qid: string, ans: { text?: string }) => {
-        if (ans.text) await actions.submit(ans.text);
+    const saveAnswer = async (_qid: string, ans: { audioBlob?: Blob; text?: string; transcript?: string; analysis: AnalysisResult | null }) => {
+        if (ans.text) await actions.submit(ans.text, ans.audioBlob);
     };
 
     const goToQuestion = (index: number) => {
@@ -140,8 +134,6 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
     const finishSession = async () => console.log("finishSession handled by Orchestrator");
     const cacheAudioUrl = () => { };
     const updateSession = async (sessionId: string, updates: Partial<InterviewSession>) => {
-        // We ignore sessionId param here as hook is bound to current session, 
-        // but for safety/interface compatibility we keep it.
         if (sessionId !== session?.id) console.warn("Context updateSession ID mismatch - updating current anyway");
         await actions.updateSession(updates);
     };
@@ -150,22 +142,14 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
         isEnabled: session?.status !== 'COMPLETED',
         onUpdate: (seconds) => {
             if (session?.id) {
-                // Update the session's engagedTimeSeconds in DB
-                // We add the delta (seconds) to the current session value?
-                // Wait, actions.updateSession replaces? No, usually merges. 
-                // But we need to atomic increment? 
-                // Currently `useEngagementTracker` returns a delta `accumulatedSeconds`.
-                // So we need to fetch current, add delta, and save?
-                // Or does backend handle increment? Backend is usually simple update.
-                // Optimistic update:
                 const currentTotal = session.engagedTimeSeconds || 0;
                 actions.updateSession({ engagedTimeSeconds: currentTotal + seconds });
             }
         },
     });
 
-    const createNewSession = async (role: string) => {
-        const result = await actions.init(role);
+    const createNewSession = async (role: string, parentId?: string) => {
+        const result = await actions.init(role, parentId);
         if (!result?.sessionId || !result?.candidateToken) throw new Error("Failed to create session");
         // Update the local candidateToken state to match the new session
         setCandidateToken(result.candidateToken);

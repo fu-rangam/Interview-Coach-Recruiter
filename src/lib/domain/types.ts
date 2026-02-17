@@ -110,6 +110,7 @@ export interface AnalysisResult {
     // Legacy fields to prevent breaking unknown consumers
     answerScore?: number;
     deliveryStatus?: string;
+    deliveryTips?: string[];
     evidenceExtracts?: string[];
     biggestUpgrade?: string;
     redoPrompt?: string;
@@ -146,6 +147,13 @@ export interface InterviewSession {
     viewedAt?: number;
     engagedTimeSeconds?: number;
     intakeData?: Record<string, unknown>; // Full intake JSON for context
+
+    // Lineage & Metadata
+    parentSessionId?: string;
+    attemptNumber?: number; // 1-based index (default 1)
+    clientName?: string; // For future filtering
+    readinessBand?: 'RL1' | 'RL2' | 'RL3' | 'RL4';
+    summaryNarrative?: string;
 }
 
 export interface SessionSummary {
@@ -160,4 +168,22 @@ export interface SessionSummary {
     viewedAt?: number;
     enteredInitials?: string;
     inviteToken?: string;
+
+    // Lineage
+    parentSessionId?: string;
+    attemptNumber?: number;
+    clientName?: string;
+    attempts?: SessionSummary[];
+    readinessBand?: 'RL1' | 'RL2' | 'RL3' | 'RL4';
+    summaryNarrative?: string;
+}
+
+export interface SessionDashboardMetrics {
+    totalInvites: number;
+    activeSessions: number;
+    completedSessions: number;
+    stalledSessions: number;
+    // Future expansion:
+    // activityByDate: ...
+    // questionPerformance: ...
 }

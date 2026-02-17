@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createSession, addQuestions } from "@/lib/server/session/orchestrator";
+import { createSession, addQuestions, cloneSession } from "@/lib/server/session/orchestrator";
 import { QuestionService } from "@/lib/server/services/question-service";
 import { SupabaseSessionRepository } from "@/lib/server/infrastructure/supabase-session-repository";
 import { InitSessionSchema } from "@/lib/domain/schemas";
@@ -20,18 +20,30 @@ export async function POST(request: Request) {
             );
         }
 
-        // 2. Orchestration (Pure Domain)
-        let session = createSession(parseResult.data);
+        const input = parseResult.data;
+        let session;
 
-        // 3. Service Logic (Question Generation)
-        // Decoupled from API route -> delegated to service
-        const questions = await QuestionService.generateQuestions(session.role || "General");
-        session = addQuestions(session, questions);
+        // 2. Orchestration (Clone or Create)
+        if (input.parentId) {
+            // CLONE FLOW
+            const parentSession = await repository.get(input.parentId);
+            if (!parentSession) {
+                return NextResponse.json({ error: "Parent session not found" }, { status: 404 });
+            }
+            session = cloneSession(parentSession);
+            // Questions are now cloned with new IDs inside cloneSession
+        } else {
+            // NEW SESSION FLOW
+            session = createSession(input);
+            // Service Logic (Question Generation)
+            const questions = await QuestionService.generateQuestions(session.role || "General");
+            session = addQuestions(session, questions);
+        }
 
-        // 4. Persistence
+        // 3. Persistence
         await repository.create(session);
 
-        // 5. Auth Token Issuance
+        // 4. Auth Token Issuance
         const { issueCandidateToken } = await import("@/lib/server/auth/candidate-token");
         const token = await issueCandidateToken(session.id);
 

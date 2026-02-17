@@ -7,8 +7,8 @@ import { InterviewSessionSchema } from "@/lib/domain/schemas";
 import { Logger } from "@/lib/logger";
 
 export function useSessionMutations(
-    session: InterviewSession | undefined,
-    setSession: Dispatch<SetStateAction<InterviewSession | undefined>>,
+    session: InterviewSession | null | undefined,
+    setSession: Dispatch<SetStateAction<InterviewSession | null | undefined>>,
     candidateToken?: string
 ) {
     const now = useMemo(() => selectNow(session), [session]);
@@ -16,11 +16,15 @@ export function useSessionMutations(
 
 
 
-    const init = useCallback(async (role: string) => {
+    const init = useCallback(async (role: string, parentId?: string) => {
         if (isBusyRef.current) return;
         isBusyRef.current = true;
         try {
-            const { data: newSession, headers } = await ApiClient.postWithHeaders<InterviewSession>('/api/session/start', { role }, { schema: InterviewSessionSchema });
+            const { data: newSession, headers } = await ApiClient.postWithHeaders<InterviewSession>(
+                '/api/session/start',
+                { role, parentId },
+                { schema: InterviewSessionSchema }
+            );
             setSession(newSession);
             localStorage.setItem(STORAGE_KEYS.CURRENT_SESSION_ID, newSession.id);
 
@@ -40,7 +44,7 @@ export function useSessionMutations(
         isBusyRef.current = true;
 
         try {
-            setSession((prev: InterviewSession | undefined) => prev ? { ...prev, status: "IN_SESSION" } : undefined);
+            setSession((prev: InterviewSession | null | undefined) => prev ? { ...prev, status: "IN_SESSION" } : undefined);
 
             await ApiClient.patch(`/api/session/${session.id}`, { status: "IN_SESSION" }, { token: candidateToken, schema: InterviewSessionSchema });
         } finally {
@@ -48,13 +52,13 @@ export function useSessionMutations(
         }
     }, [session, candidateToken, setSession]);
 
-    const analyzeCurrentQuestion = useCallback(async () => {
+    const analyzeCurrentQuestion = useCallback(async (audioData?: { base64: string; mimeType: string }) => {
         if (!session || !now.currentQuestionId) return;
 
         try {
             const updated = await ApiClient.post<InterviewSession>(
                 `/api/session/${session.id}/questions/${now.currentQuestionId}/analysis`,
-                {},
+                { audioData },
                 { token: candidateToken, schema: InterviewSessionSchema }
             );
             setSession(updated);
@@ -63,14 +67,14 @@ export function useSessionMutations(
         }
     }, [session, now.currentQuestionId, candidateToken, setSession]);
 
-    const submit = useCallback(async (answerText: string) => {
+    const submit = useCallback(async (answerText: string, audioBlob?: Blob | null) => {
         if (!session || !now.currentQuestionId) return;
         if (isBusyRef.current) return;
         isBusyRef.current = true;
 
         try {
             // Optimistic Update: Immediately transition to AWAITING_EVALUATION to show loader
-            setSession((prev: InterviewSession | undefined) => {
+            setSession((prev: InterviewSession | null | undefined) => {
                 if (!prev) return undefined;
                 const qid = now.currentQuestionId!;
                 return {
@@ -100,8 +104,23 @@ export function useSessionMutations(
             Logger.info("Submit success", { updatedStatus: updated.status });
             setSession(updated);
 
+            // Prepare audio data if present
+            let audioData: { base64: string; mimeType: string } | undefined;
+            if (audioBlob) {
+                const reader = new FileReader();
+                const base64Promise = new Promise<string>((resolve) => {
+                    reader.onloadend = () => {
+                        const base64String = (reader.result as string).split(',')[1];
+                        resolve(base64String);
+                    };
+                });
+                reader.readAsDataURL(audioBlob);
+                const base64 = await base64Promise;
+                audioData = { base64, mimeType: audioBlob.type };
+            }
+
             // Trigger Analysis immediately after persistence
-            await analyzeCurrentQuestion();
+            await analyzeCurrentQuestion(audioData);
         } catch (e) {
             Logger.error("Submit failed with exception", e);
             // Ideally rollback logic here
@@ -114,7 +133,7 @@ export function useSessionMutations(
         if (!session) return;
 
         // Optimistic
-        setSession((prev: InterviewSession | undefined) => prev ? {
+        setSession((prev: InterviewSession | null | undefined) => prev ? {
             ...prev,
             enteredInitials: initials,
             initialsRequired: false
@@ -131,7 +150,7 @@ export function useSessionMutations(
         if (!session || !now.currentQuestionId) return;
 
         // Optimistic: Update local session 'answers' map
-        setSession((prev: InterviewSession | undefined) => {
+        setSession((prev: InterviewSession | null | undefined) => {
             if (!prev) return undefined;
             const qid = now.currentQuestionId!;
             const currentAns = prev.answers[qid] || {};
@@ -169,7 +188,7 @@ export function useSessionMutations(
             const nextStatus = isComplete ? SESSION_STATUS.COMPLETED : SESSION_STATUS.IN_SESSION;
 
             // Optimistic
-            setSession((prev: InterviewSession | undefined) => prev ? {
+            setSession((prev: InterviewSession | null | undefined) => prev ? {
                 ...prev,
                 currentQuestionIndex: nextIdx,
                 status: nextStatus
@@ -193,7 +212,7 @@ export function useSessionMutations(
         const qid = now.currentQuestionId;
 
         // Optimistic
-        setSession((prev: InterviewSession | undefined) => {
+        setSession((prev: InterviewSession | null | undefined) => {
             if (!prev) return undefined;
 
             const currentAns = prev.answers[qid];
@@ -249,7 +268,7 @@ export function useSessionMutations(
         }
 
         // Optimistic
-        setSession((prev: InterviewSession | undefined) => prev ? {
+        setSession((prev: InterviewSession | null | undefined) => prev ? {
             ...prev,
             currentQuestionIndex: index,
             status: SESSION_STATUS.IN_SESSION
@@ -266,7 +285,7 @@ export function useSessionMutations(
         if (!session) return;
 
         // Optimistic
-        setSession((prev: InterviewSession | undefined) => prev ? { ...prev, ...updates } : undefined);
+        setSession((prev: InterviewSession | null | undefined) => prev ? { ...prev, ...updates } : undefined);
 
         await ApiClient.patch(`/api/session/${session.id}`, updates, { token: candidateToken, schema: InterviewSessionSchema });
     }, [session, candidateToken, setSession]);
@@ -275,7 +294,7 @@ export function useSessionMutations(
         if (!session) return;
 
         // Optimistic: Clear answers, reset index, status IN_SESSION
-        setSession((prev: InterviewSession | undefined) => prev ? {
+        setSession((prev: InterviewSession | null | undefined) => prev ? {
             ...prev,
             status: SESSION_STATUS.IN_SESSION,
             currentQuestionIndex: 0,

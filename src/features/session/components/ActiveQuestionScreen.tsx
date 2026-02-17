@@ -19,10 +19,6 @@ interface ActiveQuestionScreenProps {
     initialAnswer: string;
     onSaveDraft: (text: string) => void;
     onSubmit: (answer: string) => void;
-    // New Actions for Revisit/Nav
-    retryQuestion: () => void;
-    goToQuestion: (index: number) => void;
-    nextQuestion: () => void;
 }
 
 export default function ActiveQuestionScreen({
@@ -31,10 +27,7 @@ export default function ActiveQuestionScreen({
     totalQuestions, // eslint-disable-line @typescript-eslint/no-unused-vars
     initialAnswer,
     onSaveDraft,
-    onSubmit,
-    retryQuestion,
-    goToQuestion,
-    nextQuestion
+    onSubmit
 }: ActiveQuestionScreenProps) {
     const {
         session,
@@ -48,6 +41,7 @@ export default function ActiveQuestionScreen({
 
     // compute currentAns locally for Revisit Mode logic
     const currentAns = session?.answers[question.id];
+    const isThinking = session?.status === 'AWAITING_EVALUATION';
 
     // --- 1. Engagement & State ---
     const [answer, setAnswer] = useState(initialAnswer);
@@ -232,7 +226,7 @@ export default function ActiveQuestionScreen({
                         return (
                             <button
                                 key={q.id}
-                                onClick={() => { if (isClickable) { trackEvent('tier2', 'nav_click'); goToQuestion(idx); } }}
+                                onClick={() => { if (isClickable) { trackEvent('tier2', 'nav_click'); } }}
                                 disabled={!isClickable}
                                 className={cn(
                                     "flex-1 relative py-2 text-xs font-bold transition-all group",
@@ -343,44 +337,14 @@ export default function ActiveQuestionScreen({
                 <div className="flex-1" />
 
                 {/* INPUT BLOCK vs REVISIT BLOCK */}
-                {currentAns?.submittedAt ? (
+                {currentAns?.submittedAt && !isThinking ? (
                     // --- REVISIT MODE ---
                     <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
-                        <div className="mb-6">
+                        <div className="mb-2">
                             <h3 className="text-xs uppercase tracking-wider font-bold text-slate-400 mb-2">Your Answer</h3>
                             <div className="text-lg text-slate-700 italic font-sans leading-relaxed">
                                 &quot;{currentAns.transcript}&quot;
                             </div>
-                        </div>
-
-                        <div className="flex flex-col gap-3">
-                            <Button
-                                onClick={() => {
-                                    setAnswer("");
-                                    retryQuestion();
-                                }}
-                                className="w-full bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg transition-all"
-                            >
-                                Try My Answer Again
-                            </Button>
-
-                            <Button
-                                variant="ghost"
-                                onClick={() => {
-                                    const firstUnanswered = session?.questions.find((_, idx) => {
-                                        const qid = session.questions[idx].id;
-                                        return !session.answers[qid]?.submittedAt;
-                                    });
-                                    if (firstUnanswered) {
-                                        goToQuestion(firstUnanswered.index);
-                                    } else {
-                                        nextQuestion();
-                                    }
-                                }}
-                                className="w-full text-slate-400 hover:text-slate-600"
-                            >
-                                Continue to next question
-                            </Button>
                         </div>
                     </div>
                 ) : (

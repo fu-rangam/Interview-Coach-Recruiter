@@ -1,8 +1,8 @@
 import { InterviewSession } from "@/lib/domain/types";
 import { NowState, ScreenId } from "./now.types";
 
-export function selectNow(session?: InterviewSession): NowState {
-    if (!session) {
+export function selectNow(session?: InterviewSession | null): NowState {
+    if (session === undefined) {
         return {
             isLoaded: false,
             status: "NOT_STARTED",
@@ -11,7 +11,20 @@ export function selectNow(session?: InterviewSession): NowState {
             isComplete: false,
             currentQuestionIndex: 0,
             totalQuestions: 0,
-            screen: "ERROR", // Default to safe error/loading state
+            screen: "ERROR",
+        };
+    }
+
+    if (session === null) {
+        return {
+            isLoaded: true,
+            status: "ERROR",
+            requiresInitials: false,
+            canStart: false,
+            isComplete: false,
+            currentQuestionIndex: 0,
+            totalQuestions: 0,
+            screen: "ERROR",
         };
     }
 

@@ -35,6 +35,20 @@ export interface StepFooterProps {
     onNext: () => void;
     nextLabel: string | React.ReactNode;
     isNextDisabled?: boolean;
+    customAction?: React.ReactNode;
+}
+
+export interface RecruiterProfile {
+    name: string;
+    email: string;
+    phone: string;
+}
+
+export interface InviteResult {
+    firstName: string;
+    lastName: string;
+    email: string;
+    link: string;
 }
 
 // ─── Dev-Only Data Pools ────────────────────────────────────────

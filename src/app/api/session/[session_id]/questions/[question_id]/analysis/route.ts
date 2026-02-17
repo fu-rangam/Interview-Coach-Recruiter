@@ -37,10 +37,13 @@ export async function POST(
             return NextResponse.json({ error: "Question context missing" }, { status: 404 });
         }
 
+        const body = await request.json().catch(() => ({}));
+        const { audioData } = body;
+
         const analysis = await AIService.analyzeAnswer(
             context.question,
             answer.transcript,
-            null,
+            audioData || null,
             context.blueprint,
             session.intakeData,
             answer.retryContext

@@ -66,6 +66,7 @@ export const AnalysisResultSchema = z.object({
     missingKeyPoints: z.array(z.string()).optional(),
     answerScore: z.number().optional(),
     deliveryStatus: z.string().optional(),
+    deliveryTips: z.array(z.string()).optional(),
     evidenceExtracts: z.array(z.string()).optional(),
     biggestUpgrade: z.string().optional(),
     redoPrompt: z.string().optional(),
@@ -86,22 +87,27 @@ export const AnswerSchema = z.object({
 
 export const InterviewSessionSchema = z.object({
     id: z.string(),
-    candidateName: z.string().optional(),
+    candidateName: z.string().nullish().transform(v => v ?? undefined),
     role: z.string(),
-    jobDescription: z.string().nullish(),
+    jobDescription: z.string().nullish().transform(v => v ?? undefined),
     status: SessionStatusSchema,
     questions: z.array(QuestionSchema),
     currentQuestionIndex: z.number(),
     answers: z.record(z.string(), AnswerSchema),
     initialsRequired: z.boolean(),
-    enteredInitials: z.string().optional(),
-    coachingPreference: z.enum(['tier0', 'tier1', 'tier2']).optional(),
+    enteredInitials: z.string().nullish().transform(v => v ?? undefined),
+    coachingPreference: z.enum(['tier0', 'tier1', 'tier2']).nullish().transform(v => v ?? undefined),
     candidate: z.object({
         firstName: z.string(),
         lastName: z.string(),
         email: z.string(),
     }).optional(),
-    engagedTimeSeconds: z.number().optional(),
+    engagedTimeSeconds: z.number().nullish().transform(v => v ?? undefined),
+    parentSessionId: z.string().uuid().nullish().transform(v => v ?? undefined),
+    attemptNumber: z.number().int().min(1).nullish().transform(v => v ?? undefined),
+    clientName: z.string().nullish().transform(v => v ?? undefined),
+    readinessBand: z.enum(['RL1', 'RL2', 'RL3', 'RL4']).nullish().transform(v => v ?? undefined),
+    summaryNarrative: z.string().nullish().transform(v => v ?? undefined),
 });
 
 export const IntakeDataSchema = z
@@ -119,6 +125,7 @@ export const InitSessionSchema = z.object({
     role: z.string().min(1, 'Role is required'),
     jobDescription: z.string().optional(),
     intakeData: IntakeDataSchema,
+    parentId: z.string().uuid().optional(),
 });
 
 export const UpdateSessionSchema = z.object({
@@ -129,7 +136,12 @@ export const UpdateSessionSchema = z.object({
     enteredInitials: z.string().min(1).optional(),
     initialsRequired: z.boolean().optional(),
     coachingPreference: z.enum(['tier0', 'tier1', 'tier2']).optional(),
-    engagedTimeSeconds: z.number().int().min(0).optional()
+    engagedTimeSeconds: z.number().int().min(0).optional(),
+    parentSessionId: z.string().uuid().nullish().transform(v => v ?? undefined),
+    attemptNumber: z.number().int().min(1).nullish().transform(v => v ?? undefined),
+    clientName: z.string().nullish().transform(v => v ?? undefined),
+    readinessBand: z.enum(['RL1', 'RL2', 'RL3', 'RL4']).nullish().transform(v => v ?? undefined),
+    summaryNarrative: z.string().nullish().transform(v => v ?? undefined),
 }).strict();
 
 // QuestionPlan schema (minimal validation for structural integrity)

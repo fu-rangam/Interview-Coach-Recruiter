@@ -11,7 +11,7 @@ export default function SummaryScreen() {
     const handlePracticeAgain = async () => {
         // Use existing role or default
         const role = session?.role || "Product Manager";
-        const result = await createNewSession(role);
+        const result = await createNewSession(role, session?.id);
         if (result?.candidateToken) {
             router.push(`/s/${result.candidateToken}`);
         }

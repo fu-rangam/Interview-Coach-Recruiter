@@ -39,6 +39,8 @@ STRUCTURE RULES:
 - whyThisMatters: include ONLY if tier >= 1 AND providedAllowed=true.
 - nextAction: A short, punchy button label (Verb + Noun) for immediate practice. E.g., "Practice structured answers", "Try again with STAR".
 - readinessLevel: Determine RL1, RL2, RL3, or RL4 based on the definitions below.
+- deliveryStatus: (Voice only) A brief status (e.g., 'Clear & Paced', 'Slightly Fast', 'Hesitant').
+- deliveryTips: (Voice only) 1-2 actionable tips for better delivery.
 
 READINESS LEVEL DEFINITIONS (Internal Logic):
 - RL1 (Ready): Clear, relevant examples; coherent communication; minor refinements only.
@@ -75,6 +77,8 @@ Generate post-answer feedback as strict JSON matching this schema:
     "signalQuality": "insufficient|emerging|reliable|strong",
     "confidence": "low|medium|high"
   },
+  "deliveryStatus": "string (optional, e.g. 'Clear & Paced', 'Slightly Fast')",
+  "deliveryTips": ["string", "string"],
   "transcript": "string (REQUIRED for voice input, optional for text)"
 }
 
@@ -116,6 +120,11 @@ OUTPUT REQUIREMENTS:
                     label: "Try again with STAR",
                     actionType: "redo_answer"
                 },
+                deliveryStatus: "Clear & Paced",
+                deliveryTips: [
+                    "Great volume control throughout the response.",
+                    "Try to reduce filler words like 'um' in the introduction."
+                ],
                 meta: {
                     tier: 1,
                     modality: audioData ? "voice" : "text",
@@ -165,15 +174,19 @@ OUTPUT REQUIREMENTS:
             // Ensure transcript exists (from AI or input)
             const finalTranscript = result.transcript || answerText || "Audio Answer";
 
-            return {
+            const mappedResult = {
                 ...result,
                 transcript: finalTranscript,
+                deliveryStatus: result.deliveryStatus,
+                deliveryTips: result.deliveryTips,
                 // Map to legacy if UI still needs it, but prefer meta.readinessLevel
                 readinessBand: result.readinessLevel || result.meta?.readinessLevel || "RL4",
                 coachReaction: result.ack,
                 strengths: result.observations || [], // Internal evidence for RL
                 opportunities: [result.primaryFocus?.headline || "Review feedback"]
             };
+
+            return mappedResult;
 
         } catch (error) {
             Logger.error("AI Analysis Failed", error);

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import Image from 'next/image';
 import { cn } from '@/lib/cn';
 
 import { User } from '@supabase/supabase-js';
@@ -39,7 +40,16 @@ export function RecruiterSidebar({ className, onNavigate, user, profile }: Recru
     return (
         <aside className={cn("bg-white border-r flex flex-col h-screen sticky top-0", className)}>
             <div className="p-6 pb-0">
-                <div className="mb-8">
+                <div className="mb-8 flex items-center gap-3">
+                    <div className="relative w-8 h-8">
+                        <Image
+                            src="/r2w-logo.webp"
+                            alt="Ready2Work Logo"
+                            fill
+                            className="object-contain"
+                            priority
+                        />
+                    </div>
                     <h1 className="font-bold text-xl tracking-tight text-primary font-display">Ready2Work</h1>
                 </div>
 
@@ -81,11 +91,16 @@ export function RecruiterSidebar({ className, onNavigate, user, profile }: Recru
                 </Link>
 
                 <Link
-                    href="#"
-                    className="block p-2 rounded text-muted-foreground hover:bg-slate-100 transition-colors"
+                    href="/recruiter/templates"
+                    className={cn(
+                        "block p-2 rounded font-medium transition-all duration-200",
+                        isActive('/recruiter/templates')
+                            ? "bg-primary/10 text-primary"
+                            : "text-muted-foreground hover:bg-slate-100 hover:text-slate-900"
+                    )}
                     onClick={onNavigate}
                 >
-                    Candidates
+                    Templates
                 </Link>
 
                 <Link

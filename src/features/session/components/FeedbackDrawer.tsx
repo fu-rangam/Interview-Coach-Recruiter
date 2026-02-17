@@ -5,13 +5,13 @@ import { AnalysisResult } from '@/lib/domain/types';
 import {
     CheckCircle2,
     ChevronDown,
-    X,
     ArrowRight,
     Play,
     Pause,
     RotateCcw,
     Sparkles,
-    MessageSquare
+    MessageSquare,
+    Mic
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
@@ -21,7 +21,6 @@ interface FeedbackOverlayProps {
     isThinking?: boolean;
     onNext: () => void;
     onRetry: () => void;
-    onClose?: () => void;
     onStop?: () => void;
     isLastQuestion?: boolean;
     transcript?: string;
@@ -34,7 +33,6 @@ export const FeedbackDrawer: React.FC<FeedbackOverlayProps> = ({
     isThinking,
     onNext,
     onRetry,
-    onClose,
     onStop,
     isLastQuestion,
     transcript,
@@ -62,6 +60,15 @@ export const FeedbackDrawer: React.FC<FeedbackOverlayProps> = ({
     };
 
     useEffect(() => {
+        // Clear audio element when blob changes (e.g. after retry)
+        if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current = null;
+            setIsPlaying(false);
+        }
+    }, [audioBlob]);
+
+    useEffect(() => {
         return () => {
             if (audioRef.current) {
                 audioRef.current.pause();
@@ -79,7 +86,6 @@ export const FeedbackDrawer: React.FC<FeedbackOverlayProps> = ({
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        onClick={onClose}
                         className="absolute inset-0 bg-slate-900/60 backdrop-blur-xl"
                     />
 
@@ -98,12 +104,6 @@ export const FeedbackDrawer: React.FC<FeedbackOverlayProps> = ({
                                 </div>
                                 <h2 className="text-xl font-bold text-slate-900 dark:text-white font-display">Coaching Feedback</h2>
                             </div>
-                            <button
-                                onClick={onClose}
-                                className="p-2 hover:bg-slate-100 dark:hover:bg-white/5 rounded-full text-slate-400 transition-colors"
-                            >
-                                <X size={20} />
-                            </button>
                         </div>
 
                         <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-8">
@@ -139,18 +139,35 @@ export const FeedbackDrawer: React.FC<FeedbackOverlayProps> = ({
                             <div className="h-px bg-slate-200/50 dark:bg-white/5" />
 
                             {/* Analysis Section */}
-                            {isThinking ? (
-                                <div className="py-12 flex flex-col items-center justify-center space-y-4">
-                                    <div className="relative">
-                                        <div className="w-16 h-16 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin" />
-                                        <div className="absolute inset-0 flex items-center justify-center">
-                                            <Sparkles className="text-blue-600 animate-pulse" size={24} />
-                                        </div>
-                                    </div>
-                                    <p className="text-sm font-medium text-slate-500 animate-pulse">Analyzing your response...</p>
-                                </div>
-                            ) : analysis ? (
+                            {analysis ? (
                                 <section className="space-y-8 animate-in fade-in duration-700">
+                                    {/* Speaking Delivery */}
+                                    {((analysis.deliveryTips && analysis.deliveryTips.length > 0) || analysis.deliveryStatus) && (
+                                        <div className="bg-blue-600/5 dark:bg-blue-400/5 rounded-3xl border border-blue-200/50 dark:border-blue-500/10 p-6 space-y-4">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2 text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest">
+                                                    <Mic size={14} />
+                                                    <span>Speaking Delivery</span>
+                                                </div>
+                                                {analysis.deliveryStatus && (
+                                                    <span className="text-[10px] font-bold bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full border border-blue-200 dark:border-blue-800">
+                                                        {analysis.deliveryStatus}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            {analysis.deliveryTips && analysis.deliveryTips.length > 0 && (
+                                                <ul className="space-y-2">
+                                                    {analysis.deliveryTips.map((tip, i) => (
+                                                        <li key={i} className="text-sm text-blue-900/80 dark:text-blue-100/70 flex gap-2">
+                                                            <div className="mt-1.5 w-1 h-1 rounded-full bg-blue-600 dark:bg-blue-400 shrink-0" />
+                                                            {tip}
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            )}
+                                        </div>
+                                    )}
+
                                     {/* Evaluation Summary */}
                                     <div className="space-y-3">
                                         <div className="flex items-center gap-2 text-xs font-bold text-emerald-500 uppercase tracking-widest">
@@ -198,33 +215,35 @@ export const FeedbackDrawer: React.FC<FeedbackOverlayProps> = ({
                         </div>
 
                         {/* Footer Actions */}
-                        <div className="p-6 md:p-8 bg-background dark:bg-white/5 border-t border-slate-200/50 dark:border-white/5 flex flex-col md:flex-row gap-3">
-                            <Button
-                                onClick={onRetry}
-                                variant="outline"
-                                className="flex-1 h-14 rounded-2xl border-slate-200 dark:border-white/10 text-slate-700 dark:text-white hover:bg-white dark:hover:bg-white/10 gap-2"
-                            >
-                                <RotateCcw size={18} />
-                                Let me try again
-                            </Button>
-
-                            <Button
-                                onClick={onNext}
-                                className="flex-[1.5] h-14 rounded-2xl bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-600/20 text-white font-bold gap-2"
-                            >
-                                {isLastQuestion ? "Complete Session" : "Next Question"}
-                                <ArrowRight size={18} />
-                            </Button>
-
-                            {onStop && (
-                                <button
-                                    onClick={onStop}
-                                    className="md:hidden text-xs font-semibold text-slate-400 py-2"
+                        {!isThinking && (
+                            <div className="p-6 md:p-8 bg-background dark:bg-white/5 border-t border-slate-200/50 dark:border-white/5 flex flex-col md:flex-row gap-3">
+                                <Button
+                                    onClick={onRetry}
+                                    variant="outline"
+                                    className="flex-1 h-14 rounded-2xl border-slate-200 dark:border-white/10 text-slate-700 dark:text-white hover:bg-white dark:hover:bg-white/10 gap-2"
                                 >
-                                    Stop for now
-                                </button>
-                            )}
-                        </div>
+                                    <RotateCcw size={18} />
+                                    Let me try again
+                                </Button>
+
+                                <Button
+                                    onClick={onNext}
+                                    className="flex-[1.5] h-14 rounded-2xl bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-600/20 text-white font-bold gap-2"
+                                >
+                                    {isLastQuestion ? "Complete Session" : "Next Question"}
+                                    <ArrowRight size={18} />
+                                </Button>
+
+                                {onStop && (
+                                    <button
+                                        onClick={onStop}
+                                        className="md:hidden text-xs font-semibold text-slate-400 py-2"
+                                    >
+                                        Stop for now
+                                    </button>
+                                )}
+                            </div>
+                        )}
                     </motion.div>
                 </div>
             )}
