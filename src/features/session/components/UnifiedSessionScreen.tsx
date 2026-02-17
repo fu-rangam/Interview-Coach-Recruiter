@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { audioEngine } from '@/features/audio/audio-engine';
 import { useSession } from '../context/SessionContext';
 import { useSmartHints } from '../hooks/useSmartHints';
 import { useStrongResponse } from '../hooks/useStrongResponse';
@@ -17,12 +18,12 @@ import {
     Mic,
     Keyboard,
     ArrowRight,
-    StopCircle,
     Loader2,
     Lightbulb,
     Sparkles,
     X,
-    Play
+    Volume2,
+    VolumeX
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -152,11 +153,15 @@ export default function UnifiedSessionScreen() {
             }
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [currentQuestionIndex]);
+    }, [currentQuestionIndex, currentQuestion?.id]);
 
     // Handlers
     const handleTogglePlayback = async () => {
         if (!currentQuestion) return;
+
+        // Ensure AudioContext is unlocked on user gesture
+        audioEngine.unlock();
+
         if (isPlaying) {
             stopSpeaking();
         } else {
@@ -247,7 +252,7 @@ export default function UnifiedSessionScreen() {
                                 "grow-0 shrink-0 p-4 md:p-6 lg:p-10 w-full transition-all duration-500 ease-in-out cursor-default",
                                 isReviewing ? "opacity-30 scale-[0.98] pointer-events-none blur-sm" : "opacity-100 scale-100"
                             )}>
-                            <div className="glass-card text-slate-900 dark:text-white rounded-3xl p-6 md:p-10 w-full relative transition-all duration-300 ring-1 ring-white/20 bg-gradient-to-br from-[#e8f1fd] to-[#d1e3fa]">
+                            <div className="glass-card text-slate-900 dark:text-white rounded-3xl p-6 md:p-10 w-full relative transition-all duration-300 ring-1 ring-white/20 bg-gradient-to-br from-[#e8f1fd] to-[#d1e3fa] overflow-hidden">
                                 <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-200 to-blue-600" />
 
                                 <div className="flex justify-start mb-6">
@@ -310,7 +315,7 @@ export default function UnifiedSessionScreen() {
 
                                     <div className="flex-none flex justify-center items-center gap-3">
                                         {!isReviewing && !hasSubmitted && (
-                                            <div className="bg-white/30 dark:bg-white/10 backdrop-blur-md p-1 rounded-full flex gap-1 shadow-md border border-white/30 dark:border-white/10">
+                                            <div className="bg-blue-50/50 dark:bg-white/10 p-1 rounded-full flex gap-1 shadow-md border border-blue-100/50 dark:border-white/10">
                                                 <button
                                                     onClick={() => {
                                                         setMode('voice');
@@ -351,10 +356,19 @@ export default function UnifiedSessionScreen() {
                                         <button
                                             onClick={handleTogglePlayback}
                                             disabled={isTTSLoading}
-                                            className="p-2 rounded-xl bg-blue-600 text-white backdrop-blur-md shadow-md border border-white/30 hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                            className={cn(
+                                                "p-2.5 rounded-full transition-all duration-300 shadow-sm border flex items-center justify-center",
+                                                isPlaying
+                                                    ? "bg-blue-600 text-white border-blue-600 scale-105 shadow-blue-500/20"
+                                                    : "bg-blue-50/50 dark:bg-blue-900/20 text-blue-600 border-blue-100/50 dark:border-blue-800/50 hover:bg-blue-100/80 hover:scale-105"
+                                            )}
                                             aria-label={isPlaying ? "Stop reading" : "Read question"}
                                         >
-                                            {isPlaying ? <StopCircle size={18} className="animate-pulse text-white/90" /> : <Play size={18} className="text-white" />}
+                                            {isPlaying ? (
+                                                <VolumeX size={18} className="animate-pulse" />
+                                            ) : (
+                                                <Volume2 size={18} />
+                                            )}
                                         </button>
                                     </div>
                                 </div>
@@ -362,97 +376,105 @@ export default function UnifiedSessionScreen() {
                         </div>
 
                         {/* 2. BOTTOM: Interaction Area */}
-                        <div className="flex-1 flex flex-col items-center justify-center p-4 md:p-6 lg:p-10 py-1 md:py-2 w-full min-h-0 relative">
+                        <div className={cn(
+                            "flex-1 flex flex-col items-center p-4 md:p-6 lg:p-10 py-1 md:py-2 w-full min-h-0 relative",
+                            mode === 'voice' ? "justify-start" : "justify-center"
+                        )}>
                             {!isReviewing && !hasSubmitted && (
-                                <div className="w-full h-full flex items-center justify-center">
+                                <div className={cn(
+                                    "w-full flex flex-col items-center",
+                                    mode === 'voice' ? "pt-2 md:pt-4" : "h-full justify-center"
+                                )}>
                                     {mode === 'voice' ? (
-                                        <div className="h-48 w-full flex items-center justify-center pb-8">
-                                            {isRecording && (
-                                                <AudioVisualizer
-                                                    stream={mediaStream}
-                                                    isRecording={isRecording}
-                                                    className="w-full h-full"
-                                                />
-                                            )}
+                                        <div className="w-full flex flex-col items-center gap-8">
+                                            {/* Voice Action Buttons shifted up */}
+                                            <div className="flex flex-col items-center justify-center gap-6">
+                                                <div className="relative flex justify-center items-center">
+                                                    {(!audioBlob || isRecording) && (
+                                                        <button
+                                                            onClick={handleToggleRecording}
+                                                            disabled={isRecordingInitializing}
+                                                            className={cn(
+                                                                "relative w-24 h-24 rounded-full flex items-center justify-center transition-all duration-300 shadow-xl",
+                                                                isRecording
+                                                                    ? "bg-red-50 dark:bg-red-900/20 text-red-500 border-4 border-red-100 dark:border-red-900/40"
+                                                                    : "bg-blue-600 text-white hover:bg-blue-700 hover:scale-105"
+                                                            )}
+                                                        >
+                                                            {isRecordingInitializing ? (
+                                                                <Loader2 className="animate-spin w-8 h-8" />
+                                                            ) : (
+                                                                <Mic size={32} className={cn(isRecording && "animate-pulse")} />
+                                                            )}
+                                                        </button>
+                                                    )}
+
+                                                    {!isRecording && audioBlob && (
+                                                        <div className="flex gap-4 items-center animate-in fade-in zoom-in duration-300">
+                                                            <Button
+                                                                onClick={() => { resetTranscript(); resetAudio(); }}
+                                                                variant="outline"
+                                                                className="px-8 h-14 rounded-2xl bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300"
+                                                            >
+                                                                Retry
+                                                            </Button>
+                                                            <Button
+                                                                onClick={handleSubmit}
+                                                                className="px-10 h-14 rounded-2xl bg-blue-600 hover:bg-blue-700 shadow-lg font-bold"
+                                                            >
+                                                                Submit Answer
+                                                            </Button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 tracking-wide uppercase">
+                                                    {isRecording ? "Listening..." : transcript ? "Check your response above" : "Tap to Speak"}
+                                                </p>
+                                            </div>
+
+                                            {/* Visualizer below buttons or overlapping */}
+                                            <div className="h-48 w-full flex items-center justify-center">
+                                                {isRecording && (
+                                                    <AudioVisualizer
+                                                        stream={mediaStream}
+                                                        isRecording={isRecording}
+                                                        className="w-full h-full"
+                                                    />
+                                                )}
+                                            </div>
                                         </div>
                                     ) : (
-                                        <div className="w-full h-full flex flex-col pb-0">
-                                            <textarea
-                                                ref={textareaRef}
-                                                className="flex-1 w-full bg-white/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-3xl p-6 md:p-10 resize-none outline-none text-lg md:text-xl text-slate-800 dark:text-white placeholder:text-slate-300 dark:placeholder:text-white/20 font-medium shadow-sm min-h-[300px] backdrop-blur-sm focus:ring-2 focus:ring-blue-500/20 transition-all"
-                                                placeholder="Type your answer here..."
-                                                value={answerText}
-                                                onChange={(e) => setAnswerText(e.target.value)}
-                                                onFocus={handleTextareaFocus}
-                                                autoFocus
-                                            />
-                                        </div>
+                                        <textarea
+                                            ref={textareaRef}
+                                            className="flex-1 w-full bg-white/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-3xl p-6 md:p-10 resize-none outline-none text-lg md:text-xl text-slate-800 dark:text-white placeholder:text-slate-300 dark:placeholder:text-white/20 font-medium shadow-sm min-h-[300px] backdrop-blur-sm focus:ring-2 focus:ring-blue-500/20 transition-all"
+                                            placeholder="Type your answer here..."
+                                            value={answerText}
+                                            onChange={(e) => setAnswerText(e.target.value)}
+                                            onFocus={handleTextareaFocus}
+                                            autoFocus
+                                        />
                                     )}
                                 </div>
                             )}
-
                         </div>
 
                         {/* Footer: Inside main column so it squeezes with sidebar */}
-                        <footer className="shrink-0 bg-white/40 dark:bg-black/20 backdrop-blur-md border-t border-slate-100 dark:border-white/5">
+                        <footer className={cn(
+                            "shrink-0 bg-white/40 dark:bg-black/20 backdrop-blur-md border-t border-slate-100 dark:border-white/5",
+                            mode === 'voice' && "hidden md:flex opacity-0 h-0 pointer-events-none" // Hide footer in voice mode unless it's for spacing
+                        )}>
                             <div className="w-full px-4 md:px-6 lg:px-10 py-2 md:py-3 pb-4 md:pb-6">
-                                {!isReviewing && !hasSubmitted ? (
-                                    mode === 'voice' ? (
-                                        <div className="flex flex-col items-center justify-center gap-6">
-                                            <div className="relative flex justify-center items-center">
-                                                {(!audioBlob || isRecording) && (
-                                                    <button
-                                                        onClick={handleToggleRecording}
-                                                        disabled={isRecordingInitializing}
-                                                        className={cn(
-                                                            "relative w-24 h-24 rounded-full flex items-center justify-center transition-all duration-300 shadow-xl",
-                                                            isRecording
-                                                                ? "bg-red-50 dark:bg-red-900/20 text-red-500 border-4 border-red-100 dark:border-red-900/40"
-                                                                : "bg-blue-600 text-white hover:bg-blue-700 hover:scale-105"
-                                                        )}
-                                                    >
-                                                        {isRecordingInitializing ? (
-                                                            <Loader2 className="animate-spin w-8 h-8" />
-                                                        ) : (
-                                                            <Mic size={32} className={cn(isRecording && "animate-pulse")} />
-                                                        )}
-                                                    </button>
-                                                )}
-
-                                                {!isRecording && audioBlob && (
-                                                    <div className="flex gap-4 items-center animate-in fade-in zoom-in duration-300">
-                                                        <Button
-                                                            onClick={() => { resetTranscript(); resetAudio(); }}
-                                                            variant="outline"
-                                                            className="px-8 h-14 rounded-2xl bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300"
-                                                        >
-                                                            Retry
-                                                        </Button>
-                                                        <Button
-                                                            onClick={handleSubmit}
-                                                            className="px-10 h-14 rounded-2xl bg-blue-600 hover:bg-blue-700 shadow-lg font-bold"
-                                                        >
-                                                            Submit Answer
-                                                        </Button>
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 tracking-wide uppercase">
-                                                {isRecording ? "Listening..." : transcript ? "Check your response above" : "Tap to Speak"}
-                                            </p>
-                                        </div>
-                                    ) : (
-                                        <div className="flex justify-end">
-                                            <Button
-                                                onClick={handleSubmit}
-                                                disabled={!answerText.trim()}
-                                                className="px-8 h-16 text-lg bg-blue-600 hover:bg-blue-700 shadow-xl rounded-2xl font-bold"
-                                            >
-                                                Submit Answer <ArrowRight className="ml-2 w-5 h-5" />
-                                            </Button>
-                                        </div>
-                                    )
-                                ) : null}
+                                {!isReviewing && !hasSubmitted && mode === 'text' && (
+                                    <div className="flex justify-end">
+                                        <Button
+                                            onClick={handleSubmit}
+                                            disabled={!answerText.trim()}
+                                            className="px-8 h-16 text-lg bg-blue-600 hover:bg-blue-700 shadow-xl rounded-2xl font-bold"
+                                        >
+                                            Submit Answer <ArrowRight className="ml-2 w-5 h-5" />
+                                        </Button>
+                                    </div>
+                                )}
                             </div>
                         </footer>
                     </div>

@@ -33,11 +33,11 @@ export default function Home() {
                     </h1>
 
                     {/* Tagline Lockup */}
-                    <div className="flex flex-row items-center justify-center gap-[0.4rem] text-lg md:text-xl text-muted-foreground/80 font-medium tracking-wide">
-                        <span className="uppercase text-md md:text-base tracking-[0.1em] opacity-80 translate-y-[1px]">
+                    <div className="flex flex-row items-center justify-center gap-[0.4rem] text-lg md:text-xl text-muted-foreground/80 font-medium tracking-wide whitespace-nowrap">
+                        <span className="uppercase text-[10px] sm:text-xs md:text-base tracking-[0.1em] opacity-80 translate-y-[1px]">
                             Workforce Readiness Powered By
                         </span>
-                        <div className="relative h-5 w-20 md:h-6 md:w-24">
+                        <div className="relative h-4 w-16 sm:h-5 sm:w-20 md:h-6 md:w-24 flex-shrink-0">
                             <Image
                                 src="/rangam-logo.webp"
                                 alt="Rangam"
