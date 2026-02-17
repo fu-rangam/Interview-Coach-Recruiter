@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Search, ArrowUpDown, Copy, Trash2, CheckCircle2, ChevronDown, ChevronRight, History } from "lucide-react";
+import { Search, ArrowUpDown, Copy, Trash2, CheckCircle2, ChevronDown, ChevronRight, History, ExternalLink } from "lucide-react";
 import { SessionSummary } from "@/lib/domain/types";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -67,7 +67,7 @@ function getStatusBadge(session: SessionSummary) {
     }
 
     // 7. Never Viewed (initial state)
-    return <Badge variant="outline" className={`${commonClasses} text-slate-400 border-slate-200 uppercase text-[10px]`}>
+    return <Badge variant="outline" className={`${commonClasses} text-slate-400 border-slate-200 text-[10px]`}>
         Invite Sent
     </Badge>;
 }
@@ -259,7 +259,7 @@ export function RecruiterSessionsTable({ initialSessions, recruiterTimezone }: R
                 <Table>
                     <TableHeader className="bg-slate-50/50">
                         <TableRow className="hover:bg-transparent">
-                            <TableHead className="w-[200px]">
+                            <TableHead className="w-[250px]">
                                 <button
                                     onClick={() => handleSort('candidateName')}
                                     className="flex items-center gap-1 hover:text-slate-900 transition-colors uppercase text-[11px] font-bold tracking-wider text-slate-500"
@@ -333,10 +333,13 @@ export function RecruiterSessionsTable({ initialSessions, recruiterTimezone }: R
                                                         </button>
                                                     )}
                                                     <div className="flex flex-col">
-                                                        <div className="flex items-center gap-2">
-                                                            <span>{session.candidateName}</span>
+                                                        <div className="flex items-center gap-2 max-w-full">
+                                                            <span className="truncate">{session.candidateName}</span>
                                                             {hasAttempts && (
-                                                                <Badge variant="outline" className="text-[10px] h-4 px-1 bg-slate-100 border-slate-200 text-slate-600">
+                                                                <Badge
+                                                                    variant="outline"
+                                                                    className="text-[10px] py-0.5 px-1.5 bg-slate-100 border-slate-200 text-slate-600 whitespace-nowrap flex-shrink-0"
+                                                                >
                                                                     {session.attempts!.length + 1} Attempts
                                                                 </Badge>
                                                             )}
@@ -351,7 +354,7 @@ export function RecruiterSessionsTable({ initialSessions, recruiterTimezone }: R
                                             </TableCell>
                                             <TableCell className="text-slate-600">{session.role}</TableCell>
                                             <TableCell>{getStatusBadge(session)}</TableCell>
-                                            <TableCell className="text-center">{getReadinessBadge(session)}</TableCell>
+                                            <TableCell>{getReadinessBadge(session)}</TableCell>
                                             <TableCell className="text-slate-500 whitespace-nowrap text-sm">
                                                 {formatTimestamp(session.createdAt)}
                                             </TableCell>
@@ -359,30 +362,33 @@ export function RecruiterSessionsTable({ initialSessions, recruiterTimezone }: R
                                                 <div className="flex items-center justify-end gap-1">
                                                     <Button
                                                         variant="ghost"
-                                                        size="sm"
+                                                        size="icon"
                                                         asChild
-                                                        className="text-primary hover:text-primary hover:bg-primary/5 transition-colors font-medium h-8"
+                                                        className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/5 transition-colors"
+                                                        title="Open Results in New Tab"
                                                     >
-                                                        <Link href={`/recruiter/sessions/${session.id}`}>
-                                                            View Results
+                                                        <Link href={`/recruiter/sessions/${session.id}`} target="_blank" rel="noopener noreferrer">
+                                                            <ExternalLink className="h-4 w-4" />
                                                         </Link>
                                                     </Button>
 
-                                                    {session.inviteToken && (
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="h-8 w-8 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors"
-                                                            title="Copy Invite Link"
-                                                            onClick={() => handleCopyLink(session.inviteToken!, session.id)}
-                                                        >
-                                                            {copiedId === session.id ? (
-                                                                <CheckCircle2 className="h-4 w-4 text-emerald-600 animate-in zoom-in-50" />
-                                                            ) : (
-                                                                <Copy className="h-4 w-4" />
-                                                            )}
-                                                        </Button>
-                                                    )}
+                                                    <div className="w-8 h-8 flex items-center justify-center">
+                                                        {session.inviteToken ? (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-8 w-8 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors"
+                                                                title="Copy Invite Link"
+                                                                onClick={() => handleCopyLink(session.inviteToken!, session.id)}
+                                                            >
+                                                                {copiedId === session.id ? (
+                                                                    <CheckCircle2 className="h-4 w-4 text-emerald-600 animate-in zoom-in-50" />
+                                                                ) : (
+                                                                    <Copy className="h-4 w-4" />
+                                                                )}
+                                                            </Button>
+                                                        ) : null}
+                                                    </div>
 
                                                     <Button
                                                         variant="ghost"
@@ -416,21 +422,28 @@ export function RecruiterSessionsTable({ initialSessions, recruiterTimezone }: R
                                                 </TableCell>
                                                 <TableCell className="text-slate-500 text-sm italic">Same as parent</TableCell>
                                                 <TableCell>{getStatusBadge(attempt)}</TableCell>
-                                                <TableCell className="text-center">{getReadinessBadge(attempt)}</TableCell>
-                                                <TableCell className="text-slate-400 text-xs">
+                                                <TableCell>{getReadinessBadge(attempt)}</TableCell>
+                                                <TableCell className="text-slate-500 whitespace-nowrap text-sm">
                                                     {formatTimestamp(attempt.createdAt)}
                                                 </TableCell>
                                                 <TableCell className="text-right px-6" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        asChild
-                                                        className="text-slate-500 hover:text-primary hover:bg-primary/5 transition-colors font-medium h-7 text-xs"
-                                                    >
-                                                        <Link href={`/recruiter/sessions/${attempt.id}`}>
-                                                            Review
-                                                        </Link>
-                                                    </Button>
+                                                    <div className="flex items-center justify-end gap-1">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            asChild
+                                                            className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/5 transition-colors"
+                                                            title="Open Results in New Tab"
+                                                        >
+                                                            <Link href={`/recruiter/sessions/${attempt.id}`} target="_blank" rel="noopener noreferrer">
+                                                                <ExternalLink className="h-4 w-4" />
+                                                            </Link>
+                                                        </Button>
+
+                                                        {/* Placeholders to maintain alignment with parent actions */}
+                                                        <div className="w-8 h-8" />
+                                                        <div className="w-8 h-8" />
+                                                    </div>
                                                 </TableCell>
                                             </TableRow>
                                         ))}

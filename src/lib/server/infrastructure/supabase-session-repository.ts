@@ -3,7 +3,8 @@ import { InterviewSession, Answer, Question, SessionSummary, SessionStatus, Anal
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { Logger } from "@/lib/logger";
 import { decrypt } from "@/lib/server/encryption";
-import { ReadinessAggregator } from "@/lib/server/session/readiness-aggregator";
+import { ReadinessAggregator, ReadinessLevel } from "@/lib/server/session/readiness-aggregator";
+import { AIService } from "../services/ai-service";
 
 interface SessionIntake {
     candidate?: { firstName?: string; lastName?: string; name?: string };
@@ -326,9 +327,24 @@ export class SupabaseSessionRepository implements SessionRepository {
         };
 
         // Automatically aggregate readiness if data is available
-        const derivedRL = ReadinessAggregator.aggregateSession(session);
-        updates.readiness_band = session.readinessBand || derivedRL;
-        updates.summary_narrative = session.summaryNarrative || (updates.readiness_band ? ReadinessAggregator.generateNarrative(updates.readiness_band as 'RL1' | 'RL2' | 'RL3' | 'RL4') : undefined);
+        const derivedRL = ReadinessAggregator.aggregateSession({ ...session, status: updates.status as SessionStatus || session.status });
+        updates.readiness_band = (updates.status === 'COMPLETED') ? derivedRL : (session.readinessBand || derivedRL);
+
+        // Dynamic Narrative Generation on Completion
+        const stockNarratives = ['RL1', 'RL2', 'RL3', 'RL4'].map(r => ReadinessAggregator.generateNarrative(r as ReadinessLevel));
+        const isStockNarrative = !session.summaryNarrative || stockNarratives.includes(session.summaryNarrative);
+
+        if (updates.status === 'COMPLETED' && isStockNarrative) {
+            Logger.info(`[Repo] Session ${session.id} completed. Generating dynamic summary.`);
+            updates.summary_narrative = await AIService.summarizeSession(session);
+        } else if (!updates.summary_narrative) {
+            // Only set a stock narrative if we don't have one and it's currently null/stock
+            if (isStockNarrative) {
+                updates.summary_narrative = (updates.readiness_band ? ReadinessAggregator.generateNarrative(updates.readiness_band as ReadinessLevel) : undefined);
+            } else {
+                updates.summary_narrative = session.summaryNarrative;
+            }
+        }
 
         const { error: sessionError } = await supabase
             .from('sessions')
@@ -423,7 +439,33 @@ export class SupabaseSessionRepository implements SessionRepository {
         }
 
         if (Object.keys(dbUpdates).length > 0) {
-            await supabase.from('sessions').update(dbUpdates as Record<string, unknown>).eq('session_id', id);
+            // If status is becoming COMPLETED, try to generate a summary if missing
+            if (dbUpdates.status === 'COMPLETED') {
+                const session = await this.get(id);
+                // Force summary if it's currently any stock narrative or null
+                const stockNarratives = ['RL1', 'RL2', 'RL3', 'RL4'].map(r => ReadinessAggregator.generateNarrative(r as ReadinessLevel));
+                const isStockNarrative = !session?.summaryNarrative || stockNarratives.includes(session.summaryNarrative);
+
+                if (session && isStockNarrative) {
+                    Logger.info(`[Repo] Session ${id} completed via partial update. Generating dynamic summary.`);
+                    dbUpdates.summary_narrative = await AIService.summarizeSession(session);
+
+                    // Force re-aggregation to avoid sticky RL4
+                    const derivedRL = ReadinessAggregator.aggregateSession({ ...session, status: 'COMPLETED' });
+                    dbUpdates.readiness_band = derivedRL;
+                }
+            }
+
+            const { error: patchError } = await supabase.from('sessions').update(dbUpdates as Record<string, unknown>).eq('session_id', id);
+
+            if (patchError && patchError.code === '42703') {
+                Logger.warn("[Repo] readiness columns missing in updatePartial. Retrying without them.");
+                delete dbUpdates.readiness_band;
+                delete dbUpdates.summary_narrative;
+                await supabase.from('sessions').update(dbUpdates as Record<string, unknown>).eq('session_id', id);
+            } else if (patchError) {
+                Logger.error("[Repo] updatePartial Failed", patchError);
+            }
         }
 
         // Similar logic for questions/answers if provided in updates... 

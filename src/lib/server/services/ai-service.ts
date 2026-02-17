@@ -1,5 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
-import { Question, Blueprint, AnalysisResult } from "@/lib/domain/types";
+import { Question, Blueprint, AnalysisResult, InterviewSession, Answer } from "@/lib/domain/types";
 import { buildAnalysisContext } from "@/lib/ai/prompts";
 import { Logger } from "@/lib/logger";
 
@@ -75,7 +75,8 @@ Generate post-answer feedback as strict JSON matching this schema:
     "tier": 0|1|2,
     "modality": "text|voice",
     "signalQuality": "insufficient|emerging|reliable|strong",
-    "confidence": "low|medium|high"
+    "confidence": "low|medium|high",
+    "readinessLevel": "RL1|RL2|RL3|RL4"
   },
   "deliveryStatus": "string (optional, e.g. 'Clear & Paced', 'Slightly Fast')",
   "deliveryTips": ["string", "string"],
@@ -180,7 +181,7 @@ OUTPUT REQUIREMENTS:
                 deliveryStatus: result.deliveryStatus,
                 deliveryTips: result.deliveryTips,
                 // Map to legacy if UI still needs it, but prefer meta.readinessLevel
-                readinessBand: result.readinessLevel || result.meta?.readinessLevel || "RL4",
+                readinessBand: result.meta?.readinessLevel || result.readinessLevel || "RL4",
                 coachReaction: result.ack,
                 strengths: result.observations || [], // Internal evidence for RL
                 opportunities: [result.primaryFocus?.headline || "Review feedback"]
@@ -206,6 +207,54 @@ OUTPUT REQUIREMENTS:
                 strengths: [],
                 opportunities: []
             };
+        }
+    }
+
+    static async summarizeSession(
+        session: InterviewSession
+    ): Promise<string> {
+        if (!ai) return "Session completed. No automated summary available.";
+
+        const answersContext = Object.values(session.answers as Record<string, Answer> || {})
+            .map((a: Answer, i: number) => {
+                const qText = session.questions.find((q: Question) => q.id === a.questionId)?.text || "Unknown Question";
+                return `Q${i + 1}: ${qText}\nA: ${a.transcript}\nResult: ${a.analysis?.readinessBand || 'RL4'}`;
+            })
+            .join("\n\n");
+
+        const prompt = `
+SYSTEM:
+You are an expert recruiter assistant.
+Summarize the following interview session into a concise, professional 1-2 sentence executive summary for a recruiter.
+Focus on the candidate's core strengths and primary readiness level.
+Do not use pass/fail language.
+Be specific about the role: ${session.role}.
+
+ANSWERS:
+${answersContext}
+
+ROLE CONTEXT:
+${session.jobDescription}
+
+Generate ONLY the summary string (no JSON, no intro).
+`;
+
+        try {
+            const response = await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: {
+                    parts: [{ text: prompt }]
+                },
+                config: {
+                    // Standard prompt, no JSON schema needed here
+                }
+            });
+
+            return response.text || "No summary generated.";
+        } catch (error) {
+            Logger.error("Session Summarization Failed", error);
+            // Fallback for UI
+            return `The candidate completed the interview for the ${session.role} position. They demonstrated consistent effort across all questions.`;
         }
     }
 }

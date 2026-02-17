@@ -95,6 +95,7 @@ export interface AnalysisResult {
         modality: 'text' | 'voice';
         signalQuality: 'insufficient' | 'emerging' | 'reliable' | 'strong';
         confidence: 'low' | 'medium' | 'high';
+        readinessLevel?: 'RL1' | 'RL2' | 'RL3' | 'RL4';
     };
 
     transcript?: string;

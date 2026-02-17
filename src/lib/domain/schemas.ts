@@ -54,6 +54,7 @@ export const AnalysisResultSchema = z.object({
         modality: z.enum(['text', 'voice']),
         signalQuality: z.enum(['insufficient', 'emerging', 'reliable', 'strong']),
         confidence: z.enum(['low', 'medium', 'high']),
+        readinessLevel: z.enum(['RL1', 'RL2', 'RL3', 'RL4']).optional(),
     }).optional(),
     transcript: z.string().optional(),
 
