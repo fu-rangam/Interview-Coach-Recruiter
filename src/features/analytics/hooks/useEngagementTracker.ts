@@ -33,14 +33,16 @@ interface UseEngagementTrackerProps {
     isEnabled: boolean;
     onUpdate: (seconds: number) => void;
     isContinuousActive?: boolean; // e.g., isRecording
+    initialSeconds?: number;
 }
 
 export const useEngagementTracker = ({
     isEnabled,
     onUpdate,
     isContinuousActive = false,
+    initialSeconds = 0,
 }: UseEngagementTrackerProps) => {
-    const [totalEngagedSeconds, setTotalEngagedSeconds] = useState(0);
+    const [totalEngagedSeconds, setTotalEngagedSeconds] = useState(initialSeconds);
     const [isWindowOpen, setIsWindowOpen] = useState(false);
     const [windowTimeRemaining, setWindowTimeRemaining] = useState(0);
     const [debugEvents, setDebugEvents] = useState<TrackerEvent[]>([]);
@@ -57,6 +59,15 @@ export const useEngagementTracker = ({
         onUpdateRef.current = onUpdate;
         isWindowOpenRef.current = isWindowOpen;
     }, [onUpdate, isWindowOpen]);
+
+    useEffect(() => {
+        setTotalEngagedSeconds((prev) => {
+            if (initialSeconds > prev) {
+                return initialSeconds;
+            }
+            return prev;
+        });
+    }, [initialSeconds]); // deliberately excluding totalEngagedSeconds to avoid loop, it's a one-way sync from server -> local if server is ahead
 
     // Debug Helper
     const logEvent = useCallback(
@@ -93,21 +104,32 @@ export const useEngagementTracker = ({
 
             if (tier === 'tier3') {
                 // Tier 3: Task Event - ALWAYS opens/resets the window
+                // Default to 60s for Tier 3 if not specified
+                const t3Duration = (durationSeconds || 60) * 1000;
+                setIsWindowOpen(true);
+                windowExpiryRef.current = now + t3Duration;
+                logEvent('WINDOW_OPEN', 'tier3', `Task Event detected${typeLabel} (${t3Duration / 1000}s)`);
+            } else if (tier === 'tier2') {
+                // Tier 2: Interaction - Opens OR extends the window
                 setIsWindowOpen(true);
                 windowExpiryRef.current = now + extensionTime;
-                logEvent('WINDOW_OPEN', 'tier3', `Task Event detected${typeLabel}`);
-            } else if (tier === 'tier2') {
-                // Tier 2: Interaction - ONLY extends if window is already open
-                if (isWindowOpen && now < windowExpiryRef.current) {
-                    windowExpiryRef.current = now + extensionTime;
-                    logEvent('WINDOW_EXTEND', 'tier2', `Interaction extended window${typeLabel}`);
-                } else {
-                    logEvent('TRACK_EVENT', 'tier2', `Ignored: Window not open${typeLabel}`);
-                }
+
+                const eventLabel = isWindowOpen ? 'WINDOW_EXTEND' : 'WINDOW_OPEN';
+                logEvent(eventLabel, 'tier2', `Interaction ${eventLabel.toLowerCase()}ed window${typeLabel}`);
             }
         },
         [isWindowOpen, logEvent]
     );
+
+    // Flush local accumulation to persistence
+    const flush = useCallback(() => {
+        if (accumulatedSecondsRef.current > 0) {
+            onUpdateRef.current(accumulatedSecondsRef.current);
+            accumulatedSecondsRef.current = 0;
+            lastSaveRef.current = Date.now();
+            logEvent('TRACK_EVENT', undefined, 'Manual flush triggered');
+        }
+    }, [logEvent]);
 
     // Expose methods for components to report events
     const trackEvent = useCallback(
@@ -189,6 +211,7 @@ export const useEngagementTracker = ({
         totalEngagedSeconds,
         isWindowOpen,
         trackEvent,
+        flush,
         // Debug exports
         debugEvents,
         windowTimeRemaining,

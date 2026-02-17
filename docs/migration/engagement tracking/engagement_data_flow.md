@@ -14,7 +14,7 @@ graph TD
     end
 
     subgraph Internal ["Internal State (The 'Window')"]
-        Window["Engagement Window (30s)"]
+        Window["Engagement Window (30s/60s)"]
         Timer["Window Timer"]
         Acc["Accumulator (Seconds)"]
         TierLogic{Event Tier Logic}
@@ -77,12 +77,12 @@ The hook processes engagement via a "Tiered" system:
     *   **Effect:** If hidden, immediately forces window close and stops tracking, regardless of other states.
 *   **Tier 2 (Interaction):**
     *   **Trigger:** `trackEvent('tier2', ...)`
-    *   **Logic:** *Only* extends the window if it is **already open**. Does not start a new session.
-    *   **Current Usage:** **None found** in `ActiveQuestionScreen`.
+    *   **Logic:** **Opens OR extends** the window (starts/continues tracking) and sets expiry to +30s.
+    *   **Current Usage:** Wiring exists for typing, hints, examples, mic/playback toggles, and mode switching.
 *   **Tier 3 (Task Event):**
     *   **Trigger:** `trackEvent('tier3', ...)`
-    *   **Logic:** explicitly **opens** the window (starts tracking) and sets expiry to +30s.
-    *   **Current Usage:** Triggered when the user clicks the Microphone button (`handleToggleRecording`).
+    *   **Logic:** explicitly **opens** the window (starts tracking) and sets expiry to **+60s** (default).
+    *   **Current Usage:** Triggered on session entry and answer submission.
 *   **Continuous (Virtual Tier 3):**
     *   **Logic:** While `isContinuousActive` is `true`, the window is forced open and expiry is constantly pushed forward.
 

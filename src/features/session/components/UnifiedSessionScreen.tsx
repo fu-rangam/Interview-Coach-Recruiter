@@ -38,10 +38,12 @@ export default function UnifiedSessionScreen() {
         nextQuestion,
         retryQuestion,
         trackEvent,
+        totalEngagedSeconds,
         isEngagementWindowOpen,
         engagementDebugEvents,
         engagementWindowTimeRemaining,
-        clearDebugEvents
+        clearDebugEvents,
+        flushEngagement
     } = useSession();
 
     // Derived State from context
@@ -164,8 +166,10 @@ export default function UnifiedSessionScreen() {
 
         if (isPlaying) {
             stopSpeaking();
+            trackEvent('tier2', 'playback_stop');
         } else {
             speak(currentQuestion.text, currentQuestion.id);
+            trackEvent('tier2', 'playback_start');
         }
     };
 
@@ -173,9 +177,11 @@ export default function UnifiedSessionScreen() {
         if (isRecording) {
             await stopRecording();
             stopListening();
+            trackEvent('tier2', 'mic_stop');
         } else {
             await startRecording();
             startListening();
+            trackEvent('tier2', 'mic_start');
         }
     };
 
@@ -278,6 +284,7 @@ export default function UnifiedSessionScreen() {
                                                         } else {
                                                             setHintOpen(true);
                                                             setStrongResponseOpen(false);
+                                                            trackEvent('tier2', 'view_hint');
                                                             if (!hints) fetchHints();
                                                         }
                                                     }}
@@ -297,6 +304,7 @@ export default function UnifiedSessionScreen() {
                                                         } else {
                                                             setStrongResponseOpen(true);
                                                             setHintOpen(false);
+                                                            trackEvent('tier2', 'view_example');
                                                             if (!strongResponseData) fetchStrongResponse();
                                                         }
                                                     }}
@@ -320,6 +328,7 @@ export default function UnifiedSessionScreen() {
                                                     onClick={() => {
                                                         setMode('voice');
                                                         setAnswerText('');
+                                                        trackEvent('tier2', 'mode_voice');
                                                     }}
                                                     className={cn(
                                                         "p-2 px-3 rounded-full transition-all flex items-center justify-center gap-2",
@@ -337,6 +346,7 @@ export default function UnifiedSessionScreen() {
                                                         stopListening();
                                                         resetTranscript();
                                                         resetAudio();
+                                                        trackEvent('tier2', 'mode_text');
                                                     }}
                                                     className={cn(
                                                         "p-2 px-3 rounded-full transition-all flex items-center justify-center gap-2",
@@ -449,7 +459,10 @@ export default function UnifiedSessionScreen() {
                                             className="flex-1 w-full bg-white/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-3xl p-6 md:p-10 resize-none outline-none text-lg md:text-xl text-slate-800 dark:text-white placeholder:text-slate-300 dark:placeholder:text-white/20 font-medium shadow-sm min-h-[300px] backdrop-blur-sm focus:ring-2 focus:ring-blue-500/20 transition-all"
                                             placeholder="Type your answer here..."
                                             value={answerText}
-                                            onChange={(e) => setAnswerText(e.target.value)}
+                                            onChange={(e) => {
+                                                setAnswerText(e.target.value);
+                                                trackEvent('tier2', 'typing');
+                                            }}
                                             onFocus={handleTextareaFocus}
                                             autoFocus
                                         />
@@ -610,9 +623,10 @@ export default function UnifiedSessionScreen() {
                 isVisible={showDebug}
                 onClose={() => setShowDebug(false)}
                 tracker={{
-                    totalEngagedSeconds: session?.engagedTimeSeconds || 0,
+                    totalEngagedSeconds: totalEngagedSeconds,
                     isWindowOpen: isEngagementWindowOpen,
                     trackEvent,
+                    flush: flushEngagement,
                     debugEvents: engagementDebugEvents,
                     windowTimeRemaining: engagementWindowTimeRemaining,
                     clearDebugEvents: clearDebugEvents

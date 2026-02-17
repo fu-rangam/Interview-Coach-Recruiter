@@ -397,8 +397,8 @@ export class SupabaseSessionRepository implements SessionRepository {
         if (updates.attemptNumber) dbUpdates.attempt_number = updates.attemptNumber;
         if (updates.clientName) dbUpdates.client_name = updates.clientName;
 
-        // Handle enteredInitials persistence
-        if (updates.enteredInitials !== undefined) {
+        // Handle intake_json updates (Initials, Engagement)
+        if (updates.enteredInitials !== undefined || updates.engagedTimeDelta !== undefined || updates.engagedTimeSeconds !== undefined) {
             const { data: current } = await supabase
                 .from('sessions')
                 .select('intake_json')
@@ -406,10 +406,20 @@ export class SupabaseSessionRepository implements SessionRepository {
                 .single();
 
             const currentIntake = (current?.intake_json as SessionIntake) || {};
-            dbUpdates.intake_json = {
-                ...currentIntake,
-                entered_initials: updates.enteredInitials
-            };
+            const newIntake = { ...currentIntake };
+
+            if (updates.enteredInitials !== undefined) {
+                newIntake.entered_initials = updates.enteredInitials;
+            }
+
+            if (updates.engagedTimeDelta !== undefined) {
+                newIntake.engaged_time_seconds = (newIntake.engaged_time_seconds || 0) + updates.engagedTimeDelta;
+            } else if (updates.engagedTimeSeconds !== undefined) {
+                // Absolute update (ensure it never goes backwards)
+                newIntake.engaged_time_seconds = Math.max(newIntake.engaged_time_seconds || 0, updates.engagedTimeSeconds);
+            }
+
+            dbUpdates.intake_json = newIntake;
         }
 
         if (Object.keys(dbUpdates).length > 0) {

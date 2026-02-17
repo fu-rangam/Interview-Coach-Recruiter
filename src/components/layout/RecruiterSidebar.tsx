@@ -50,7 +50,11 @@ export function RecruiterSidebar({ className, onNavigate, user, profile }: Recru
                             priority
                         />
                     </div>
-                    <h1 className="font-bold text-xl tracking-tight text-primary font-display">Ready2Work</h1>
+                    <h1 className="font-bold text-xl tracking-tight font-display select-none">
+                        <span className="text-[#3b82f6]">Ready</span>
+                        <span className="text-[#F95500]">2</span>
+                        <span className="text-brand-deep">Work</span>
+                    </h1>
                 </div>
 
                 <div className="mb-6 pb-6 border-b">

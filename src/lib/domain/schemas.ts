@@ -142,6 +142,7 @@ export const UpdateSessionSchema = z.object({
     clientName: z.string().nullish().transform(v => v ?? undefined),
     readinessBand: z.enum(['RL1', 'RL2', 'RL3', 'RL4']).nullish().transform(v => v ?? undefined),
     summaryNarrative: z.string().nullish().transform(v => v ?? undefined),
+    engagedTimeDelta: z.number().int().min(0).optional(),
 }).strict();
 
 // QuestionPlan schema (minimal validation for structural integrity)

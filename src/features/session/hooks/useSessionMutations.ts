@@ -14,7 +14,19 @@ export function useSessionMutations(
     const now = useMemo(() => selectNow(session), [session]);
     const isBusyRef = useRef(false);
 
-
+    /**
+     * Merges a new session object with the current local state, 
+     * ensuring we never roll back the engagement clock.
+     */
+    const mergeSession = useCallback((updated: InterviewSession) => {
+        setSession((prev) => {
+            if (!prev) return updated;
+            return {
+                ...updated,
+                engagedTimeSeconds: Math.max(prev.engagedTimeSeconds || 0, updated.engagedTimeSeconds || 0)
+            };
+        });
+    }, [setSession]);
 
     const init = useCallback(async (role: string, parentId?: string) => {
         if (isBusyRef.current) return;
@@ -46,11 +58,12 @@ export function useSessionMutations(
         try {
             setSession((prev: InterviewSession | null | undefined) => prev ? { ...prev, status: "IN_SESSION" } : undefined);
 
-            await ApiClient.patch(`/api/session/${session.id}`, { status: "IN_SESSION" }, { token: candidateToken, schema: InterviewSessionSchema });
+            const updated = await ApiClient.patch<InterviewSession>(`/api/session/${session.id}`, { status: "IN_SESSION" }, { token: candidateToken, schema: InterviewSessionSchema });
+            mergeSession(updated);
         } finally {
             isBusyRef.current = false;
         }
-    }, [session, candidateToken, setSession]);
+    }, [session, candidateToken, setSession, mergeSession]);
 
     const analyzeCurrentQuestion = useCallback(async (audioData?: { base64: string; mimeType: string }) => {
         if (!session || !now.currentQuestionId) return;
@@ -61,11 +74,11 @@ export function useSessionMutations(
                 { audioData },
                 { token: candidateToken, schema: InterviewSessionSchema }
             );
-            setSession(updated);
+            mergeSession(updated);
         } catch (e) {
             console.error("Analysis trigger failed:", e);
         }
-    }, [session, now.currentQuestionId, candidateToken, setSession]);
+    }, [session, now.currentQuestionId, candidateToken, mergeSession]);
 
     const submit = useCallback(async (answerText: string, audioBlob?: Blob | null) => {
         if (!session || !now.currentQuestionId) return;
@@ -73,7 +86,7 @@ export function useSessionMutations(
         isBusyRef.current = true;
 
         try {
-            // Optimistic Update: Immediately transition to AWAITING_EVALUATION to show loader
+            // Optimistic Update
             setSession((prev: InterviewSession | null | undefined) => {
                 if (!prev) return undefined;
                 const qid = now.currentQuestionId!;
@@ -94,7 +107,6 @@ export function useSessionMutations(
                 };
             });
 
-            // But for V1, let's wait for the response to ensure persistence.
             const updated = await ApiClient.post<InterviewSession>(
                 `/api/session/${session.id}/questions/${now.currentQuestionId}/submit`,
                 { text: answerText },
@@ -102,7 +114,7 @@ export function useSessionMutations(
             );
 
             Logger.info("Submit success", { updatedStatus: updated.status });
-            setSession(updated);
+            mergeSession(updated);
 
             // Prepare audio data if present
             let audioData: { base64: string; mimeType: string } | undefined;
@@ -119,15 +131,13 @@ export function useSessionMutations(
                 audioData = { base64, mimeType: audioBlob.type };
             }
 
-            // Trigger Analysis immediately after persistence
             await analyzeCurrentQuestion(audioData);
         } catch (e) {
             Logger.error("Submit failed with exception", e);
-            // Ideally rollback logic here
         } finally {
             isBusyRef.current = false;
         }
-    }, [session, now.currentQuestionId, candidateToken, setSession, analyzeCurrentQuestion]);
+    }, [session, now.currentQuestionId, candidateToken, setSession, mergeSession, analyzeCurrentQuestion]);
 
     const submitInitials = useCallback(async (initials: string) => {
         if (!session) return;
@@ -139,17 +149,18 @@ export function useSessionMutations(
             initialsRequired: false
         } : undefined);
 
-        await ApiClient.patch(
+        const updated = await ApiClient.patch<InterviewSession>(
             `/api/session/${session.id}`,
             { enteredInitials: initials, initialsRequired: false },
             { token: candidateToken, schema: InterviewSessionSchema }
         );
-    }, [session, candidateToken, setSession]);
+        mergeSession(updated);
+    }, [session, candidateToken, setSession, mergeSession]);
 
     const saveDraft = useCallback(async (text: string) => {
         if (!session || !now.currentQuestionId) return;
 
-        // Optimistic: Update local session 'answers' map
+        // Optimistic
         setSession((prev: InterviewSession | null | undefined) => {
             if (!prev) return undefined;
             const qid = now.currentQuestionId!;
@@ -169,10 +180,6 @@ export function useSessionMutations(
         });
 
         const url = `/api/session/${session.id}/questions/${now.currentQuestionId}/answer`;
-        // console.log(`[useDomainSession] saveDraft -> PUT ${url}`);
-
-        // We expect { success: true }, not the full session.
-        // Remove schema validation for this call.
         await ApiClient.put<{ success: boolean }>(url, { text, isFinal: false }, { token: candidateToken })
             .catch(e => console.error("[useDomainSession] saveDraft Error:", e));
     }, [session, now.currentQuestionId, candidateToken, setSession]);
@@ -194,7 +201,7 @@ export function useSessionMutations(
                 status: nextStatus
             } : undefined);
 
-            await ApiClient.patch(
+            const updated = await ApiClient.patch<InterviewSession>(
                 `/api/session/${session.id}`,
                 {
                     currentQuestionIndex: nextIdx,
@@ -202,10 +209,11 @@ export function useSessionMutations(
                 },
                 { token: candidateToken, schema: InterviewSessionSchema }
             );
+            mergeSession(updated);
         } finally {
             isBusyRef.current = false;
         }
-    }, [session, candidateToken, setSession]);
+    }, [session, candidateToken, setSession, mergeSession]);
 
     const retry = useCallback(async (retryContext?: { trigger: 'user' | 'coach'; focus?: string }) => {
         if (!session || !now.currentQuestionId) return;
@@ -214,38 +222,36 @@ export function useSessionMutations(
         // Optimistic
         setSession((prev: InterviewSession | null | undefined) => {
             if (!prev) return undefined;
-
             const currentAns = prev.answers[qid];
             if (!currentAns) return prev;
 
             return {
                 ...prev,
-                status: SESSION_STATUS.IN_SESSION, // Force back to session mode
+                status: SESSION_STATUS.IN_SESSION,
                 answers: {
                     ...prev.answers,
                     [qid]: {
                         ...currentAns,
                         submittedAt: undefined,
                         analysis: undefined,
-                        retryContext: retryContext // Store context optimistically
-                        // transcript (draft) remains
+                        retryContext: retryContext
                     }
                 }
             };
         });
 
-        // Server Persist: We need to clear these fields.
-        await ApiClient.post(
+        const updated = await ApiClient.post<InterviewSession>(
             `/api/session/${session.id}/questions/${qid}/retry`,
             { retryContext },
             { token: candidateToken, schema: InterviewSessionSchema }
         );
-    }, [session, now.currentQuestionId, candidateToken, setSession]);
+        mergeSession(updated);
+    }, [session, now.currentQuestionId, candidateToken, setSession, mergeSession]);
 
     const goToQuestion = useCallback(async (index: number) => {
         if (!session) return;
 
-        // Validation: Can only go to questions up to the first unanswered one (furthest progress)
+        // Validation
         let maxAllowed = 0;
         for (let i = 0; i < session.questions.length; i++) {
             const q = session.questions[i];
@@ -274,12 +280,13 @@ export function useSessionMutations(
             status: SESSION_STATUS.IN_SESSION
         } : undefined);
 
-        await ApiClient.patch(
+        const updated = await ApiClient.patch<InterviewSession>(
             `/api/session/${session.id}`,
             { currentQuestionIndex: index },
             { token: candidateToken, schema: InterviewSessionSchema }
         );
-    }, [session, candidateToken, setSession]);
+        mergeSession(updated);
+    }, [session, candidateToken, setSession, mergeSession]);
 
     const updateSession = useCallback(async (updates: Partial<InterviewSession>) => {
         if (!session) return;
@@ -287,22 +294,43 @@ export function useSessionMutations(
         // Optimistic
         setSession((prev: InterviewSession | null | undefined) => prev ? { ...prev, ...updates } : undefined);
 
-        await ApiClient.patch(`/api/session/${session.id}`, updates, { token: candidateToken, schema: InterviewSessionSchema });
+        const updated = await ApiClient.patch<InterviewSession>(`/api/session/${session.id}`, updates, { token: candidateToken, schema: InterviewSessionSchema });
+        mergeSession(updated);
+    }, [session, candidateToken, setSession, mergeSession]);
+
+    const recordEngagement = useCallback(async (deltaSeconds: number) => {
+        if (!session) return;
+
+        // Optimistic update using delta to avoid stale clock read
+        setSession((prev) => {
+            if (!prev) return prev;
+            return {
+                ...prev,
+                engagedTimeSeconds: (prev.engagedTimeSeconds || 0) + deltaSeconds
+            };
+        });
+
+        // Patch to server
+        await ApiClient.patch(`/api/session/${session.id}`,
+            { engagedTimeDelta: deltaSeconds },
+            { token: candidateToken }
+        );
     }, [session, candidateToken, setSession]);
 
     const reset = useCallback(async () => {
         if (!session) return;
 
-        // Optimistic: Clear answers, reset index, status IN_SESSION
+        // Optimistic
         setSession((prev: InterviewSession | null | undefined) => prev ? {
             ...prev,
             status: SESSION_STATUS.IN_SESSION,
             currentQuestionIndex: 0,
-            answers: {} // Clear all answers
+            answers: {}
         } : undefined);
 
-        await ApiClient.post(`/api/session/${session.id}/reset`, {}, { token: candidateToken, schema: InterviewSessionSchema });
-    }, [session, candidateToken, setSession]);
+        const updated = await ApiClient.post<InterviewSession>(`/api/session/${session.id}/reset`, {}, { token: candidateToken, schema: InterviewSessionSchema });
+        mergeSession(updated);
+    }, [session, candidateToken, setSession, mergeSession]);
 
     return {
         init,
@@ -315,6 +343,7 @@ export function useSessionMutations(
         goToQuestion,
         analyzeCurrentQuestion,
         updateSession,
+        recordEngagement,
         reset
     };
 }

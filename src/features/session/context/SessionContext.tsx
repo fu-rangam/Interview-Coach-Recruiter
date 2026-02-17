@@ -46,11 +46,14 @@ export interface SessionContextType {
     screen: ScreenId;
 
     // Engagement State (Hoisted)
+    totalEngagedSeconds: number;
     trackEvent: (tier: EngagementTier, eventType?: string, durationSeconds?: number) => void;
     engagementDebugEvents: TrackerEvent[];
     isEngagementWindowOpen: boolean;
     engagementWindowTimeRemaining: number;
     clearDebugEvents: () => void;
+    flushEngagement: () => void;
+    recordEngagement: (deltaSeconds: number) => void;
     createNewSession: (role: string, parentId?: string) => Promise<{ sessionId: string; candidateToken: string }>;
 }
 
@@ -113,18 +116,24 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
     };
 
     const nextQuestion = () => {
+        tracker.flush();
         actions.next();
     };
 
     const retryQuestion = (context?: { trigger: 'user' | 'coach'; focus?: string }) => {
+        tracker.flush();
         actions.retry(context);
     };
 
     const saveAnswer = async (_qid: string, ans: { audioBlob?: Blob; text?: string; transcript?: string; analysis: AnalysisResult | null }) => {
-        if (ans.text) await actions.submit(ans.text, ans.audioBlob);
+        if (ans.text) {
+            tracker.flush();
+            await actions.submit(ans.text, ans.audioBlob);
+        }
     };
 
     const goToQuestion = (index: number) => {
+        tracker.flush();
         actions.goToQuestion(index);
     };
 
@@ -140,11 +149,9 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
 
     const tracker = useEngagementTracker({
         isEnabled: session?.status !== 'COMPLETED',
+        initialSeconds: session?.engagedTimeSeconds || 0,
         onUpdate: (seconds) => {
-            if (session?.id) {
-                const currentTotal = session.engagedTimeSeconds || 0;
-                actions.updateSession({ engagedTimeSeconds: currentTotal + seconds });
-            }
+            actions.recordEngagement(seconds);
         },
     });
 
@@ -178,11 +185,14 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
         cacheAudioUrl,
         updateSession,
         // Engagement
+        totalEngagedSeconds: tracker.totalEngagedSeconds,
         trackEvent: tracker.trackEvent,
         engagementDebugEvents: tracker.debugEvents,
         isEngagementWindowOpen: tracker.isWindowOpen,
         engagementWindowTimeRemaining: tracker.windowTimeRemaining,
         clearDebugEvents: tracker.clearDebugEvents,
+        flushEngagement: tracker.flush,
+        recordEngagement: actions.recordEngagement,
         createNewSession
     };
 

@@ -146,6 +146,7 @@ export interface InterviewSession {
     inviteToken?: string; // Persisted plain token for "Copy Link"
     viewedAt?: number;
     engagedTimeSeconds?: number;
+    engagedTimeDelta?: number;
     intakeData?: Record<string, unknown>; // Full intake JSON for context
 
     // Lineage & Metadata
