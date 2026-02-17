@@ -472,8 +472,21 @@ export default function UnifiedSessionScreen() {
                                                         </div>
                                                     )}
                                                 </div>
+
+                                                {/* Transcript Preview */}
+                                                {(transcript || isRecording) && (
+                                                    <div className="w-full max-w-2xl px-6 py-4 bg-blue-50/30 dark:bg-white/5 rounded-2xl border border-blue-100/50 dark:border-white/10 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                                        <p className={cn(
+                                                            "text-base md:text-lg leading-relaxed text-center italic",
+                                                            isRecording ? "text-blue-400 dark:text-blue-500/50" : "text-slate-700 dark:text-slate-200 font-medium"
+                                                        )}>
+                                                            {transcript ? `"${transcript}"` : isRecording ? "Start speaking..." : ""}
+                                                        </p>
+                                                    </div>
+                                                )}
+
                                                 <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 tracking-wide uppercase">
-                                                    {isRecording ? "Listening..." : transcript ? "Check your response above" : "Tap to Speak"}
+                                                    {isRecording ? "Listening..." : transcript ? "Ready to submit" : "Tap to Speak"}
                                                 </p>
                                             </div>
 

@@ -25,6 +25,7 @@ interface SpeechRecognition extends EventTarget {
     abort: () => void;
     onresult: (event: SpeechRecognitionEvent) => void;
     onerror: (event: SpeechRecognitionErrorEvent) => void;
+    onstart: () => void;
     onend: () => void;
 }
 
@@ -54,21 +55,25 @@ export const useSpeechToText = () => {
             recognitionRef.current.interimResults = true;
             recognitionRef.current.lang = 'en-US';
 
+            recognitionRef.current.onstart = () => {
+                console.log("[STT] Speech Recognition Started");
+                setIsListening(true);
+            };
+
             recognitionRef.current.onresult = (event: SpeechRecognitionEvent) => {
                 let currentTranscript = '';
                 for (let i = 0; i < event.results.length; ++i) {
                     currentTranscript += event.results[i][0].transcript;
                 }
+                console.log(`[STT] Result received: "${currentTranscript.slice(0, 20)}..."`);
                 setTranscript(currentTranscript);
             };
 
             recognitionRef.current.onerror = (event: SpeechRecognitionErrorEvent) => {
+                console.error('[STT] Recognition error:', event.error);
                 if (event.error === 'no-speech') {
-                    // Ignore no-speech errors usually
                     return;
                 }
-                console.error('Speech recognition error:', event.error);
-                // Don't show "aborted" as an error to the user
                 if (event.error !== 'aborted') {
                     setError(`Speech recognition error: ${event.error}`);
                 }
@@ -79,10 +84,11 @@ export const useSpeechToText = () => {
             };
 
             recognitionRef.current.onend = () => {
+                console.log("[STT] Speech Recognition Ended");
                 setIsListening(false);
             };
         } else {
-            console.warn('Browser does not support speech recognition');
+            console.warn('[STT] Browser does not support speech recognition');
             setError('Browser does not support speech recognition');
         }
 
@@ -99,22 +105,21 @@ export const useSpeechToText = () => {
             return;
         }
 
+        console.log("[STT] Requesting Start");
         setError(null);
         setTranscript('');
 
         try {
             recognitionRef.current.start();
-            setIsListening(true);
         } catch (err) {
-            console.error('Failed to start speech recognition:', err);
-            // It might throw if already started
+            console.error('[STT] Failed to start:', err);
         }
     }, []);
 
     const stopListening = useCallback(() => {
         if (recognitionRef.current) {
+            console.log("[STT] Requesting Stop");
             recognitionRef.current.stop();
-            setIsListening(false);
         }
     }, []);
 
