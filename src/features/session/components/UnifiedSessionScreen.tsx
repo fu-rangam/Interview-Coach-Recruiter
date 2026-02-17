@@ -62,6 +62,7 @@ export default function UnifiedSessionScreen() {
     const [hintOpen, setHintOpen] = useState(false);
     const [strongResponseOpen, setStrongResponseOpen] = useState(false);
     const [showDebug, setShowDebug] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Multistep Loader State
     const [showLoader, setShowLoader] = useState(false);
@@ -187,25 +188,49 @@ export default function UnifiedSessionScreen() {
 
     const handleSubmit = async () => {
         const finalAnswer = mode === 'voice' ? transcript : answerText;
-        if (!finalAnswer.trim()) return;
 
-        trackEvent('tier3', 'answer_submit');
-        if (currentQuestionId) {
-            // saveAnswer in context is a wrapper for actions.submit
-            await saveAnswer(currentQuestionId, {
-                text: finalAnswer,
-                analysis: null,
-                transcript: mode === 'voice' ? finalAnswer : undefined,
-                audioBlob: mode === 'voice' ? (audioBlob || undefined) : undefined
-            });
+        // Detailed logging for production debugging via console
+        console.log("[UnifiedSessionScreen] handleSubmit triggered", {
+            mode,
+            hasTranscript: !!transcript.trim(),
+            hasAudio: !!audioBlob,
+            currentQuestionId
+        });
+
+        if (!finalAnswer.trim()) {
+            trackEvent('tier2', 'submit_blocked_empty');
+            // Show a simple alert if in voice mode and transcript is missing
+            if (mode === 'voice') {
+                alert("We couldn't hear your response clearly. Please try speaking again or use Text Mode.");
+            }
+            return;
         }
 
-        // Cleanup local states
-        if (mode === 'voice') {
-            stopListening();
-            resetTranscript();
-        } else {
-            setAnswerText('');
+        setIsSubmitting(true);
+        trackEvent('tier3', 'answer_submit');
+
+        try {
+            if (currentQuestionId) {
+                await saveAnswer(currentQuestionId, {
+                    text: finalAnswer,
+                    analysis: null,
+                    transcript: mode === 'voice' ? finalAnswer : undefined,
+                    audioBlob: mode === 'voice' ? (audioBlob || undefined) : undefined
+                });
+            }
+
+            // Cleanup local states
+            if (mode === 'voice') {
+                stopListening();
+                resetTranscript();
+            } else {
+                setAnswerText('');
+            }
+        } catch (err) {
+            console.error("[UnifiedSessionScreen] Submission error:", err);
+            alert("There was an error submitting your answer. Please try again.");
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -273,7 +298,7 @@ export default function UnifiedSessionScreen() {
                                     {currentQuestion.text}
                                 </h2>
 
-                                <div className="flex items-center gap-4 min-h-[40px] w-auto pt-6 pb-6 md:pb-10 -mx-6 md:-mx-10 -mb-6 md:-mb-10 px-6 md:px-10 border-t-2 border-slate-500/10 dark:border-white/10 bg-blue-900/[0.03] shadow-[inset_0_2px_4px_rgba(0,0,0,0.05)]">
+                                <div className="flex items-center gap-2 md:gap-4 min-h-[48px] md:min-h-[40px] w-auto pt-4 md:pt-6 pb-4 md:pb-10 -mx-6 md:-mx-10 -mb-6 md:-mb-10 px-6 md:px-10 border-t-2 border-slate-500/10 dark:border-white/10 bg-blue-900/[0.03] shadow-[inset_0_2px_4px_rgba(0,0,0,0.05)]">
                                     <div className="flex-1 flex justify-start gap-4">
                                         {!hasSubmitted && (
                                             <>
@@ -289,13 +314,14 @@ export default function UnifiedSessionScreen() {
                                                         }
                                                     }}
                                                     className={cn(
-                                                        "inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap",
+                                                        "inline-flex items-center justify-center gap-2 px-3 md:px-4 py-2 rounded-xl text-sm font-semibold transition-all shrink-0",
                                                         hintOpen
                                                             ? "bg-blue-600 text-white shadow-lg"
                                                             : "bg-blue-50 dark:bg-blue-900/20 text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/40"
                                                     )}
+                                                    title="Interview Hints"
                                                 >
-                                                    <Lightbulb size={18} /> <span>Hints</span>
+                                                    <Lightbulb size={18} /> <span className="hidden sm:inline">Hints</span>
                                                 </button>
                                                 <button
                                                     onClick={() => {
@@ -309,19 +335,20 @@ export default function UnifiedSessionScreen() {
                                                         }
                                                     }}
                                                     className={cn(
-                                                        "inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap",
+                                                        "inline-flex items-center justify-center gap-2 px-3 md:px-4 py-2 rounded-xl text-sm font-semibold transition-all shrink-0",
                                                         strongResponseOpen
                                                             ? "bg-purple-600 text-white shadow-lg"
                                                             : "bg-purple-50 dark:bg-purple-900/20 text-purple-600 hover:bg-purple-100 dark:hover:bg-purple-900/40"
                                                     )}
+                                                    title="Example Response"
                                                 >
-                                                    <Sparkles size={18} /> <span>Example</span>
+                                                    <Sparkles size={18} /> <span className="hidden sm:inline">Example</span>
                                                 </button>
                                             </>
                                         )}
                                     </div>
 
-                                    <div className="flex-none flex justify-center items-center gap-3">
+                                    <div className="flex-none flex justify-center items-center gap-2 md:gap-3">
                                         {!isReviewing && !hasSubmitted && (
                                             <div className="bg-blue-50/50 dark:bg-white/10 p-1 rounded-full flex gap-1 shadow-md border border-blue-100/50 dark:border-white/10">
                                                 <button
@@ -334,7 +361,7 @@ export default function UnifiedSessionScreen() {
                                                         "p-2 px-3 rounded-full transition-all flex items-center justify-center gap-2",
                                                         mode === 'voice'
                                                             ? "bg-blue-600 text-white shadow-md ring-1 ring-blue-600 border-none outline-none"
-                                                            : "text-blue-600 hover:text-blue-900"
+                                                            : "text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-200"
                                                     )}
                                                     title="Voice Mode"
                                                 >
@@ -352,7 +379,7 @@ export default function UnifiedSessionScreen() {
                                                         "p-2 px-3 rounded-full transition-all flex items-center justify-center gap-2",
                                                         mode === 'text'
                                                             ? "bg-blue-600 text-white shadow-md ring-1 ring-blue-600 border-none outline-none"
-                                                            : "text-blue-600 hover:text-blue-900"
+                                                            : "text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-200"
                                                     )}
                                                     title="Text Mode"
                                                 >
@@ -430,9 +457,17 @@ export default function UnifiedSessionScreen() {
                                                             </Button>
                                                             <Button
                                                                 onClick={handleSubmit}
-                                                                className="px-10 h-14 rounded-2xl bg-blue-600 hover:bg-blue-700 shadow-lg font-bold"
+                                                                disabled={isSubmitting}
+                                                                className="px-10 h-14 rounded-2xl bg-blue-600 hover:bg-blue-700 shadow-lg font-bold min-w-[160px]"
                                                             >
-                                                                Submit Answer
+                                                                {isSubmitting ? (
+                                                                    <>
+                                                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                                        Submitting...
+                                                                    </>
+                                                                ) : (
+                                                                    "Submit Answer"
+                                                                )}
                                                             </Button>
                                                         </div>
                                                     )}
