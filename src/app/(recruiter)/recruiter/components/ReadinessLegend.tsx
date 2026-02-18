@@ -6,10 +6,10 @@ import { Info } from "lucide-react";
 
 export function ReadinessLegend() {
     return (
-        <div className="bg-white border border-blue-100 rounded-2xl p-6 shadow-sm ring-1 ring-blue-50/50">
+        <div className="bg-white border border-blue-600 rounded-2xl p-6 shadow-sm ring-1 ring-blue-50/50">
             <div className="flex items-center gap-2 mb-4">
-                <Info className="w-4 h-4 text-slate-400" />
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">Readiness Rating Legend</h4>
+                <Info className="w-4 h-4 text-blue-600" />
+                <h4 className="text-xs font-bold uppercase tracking-wider text-blue-600">Key to Readiness Ratings</h4>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="flex flex-col gap-1.5">
