@@ -17,7 +17,7 @@ interface RecruiterSessionsTableProps {
 }
 
 type SortConfig = {
-    key: keyof SessionSummary | 'created';
+    key: keyof SessionSummary | 'created' | 'engagedTimeSeconds';
     direction: 'asc' | 'desc';
 } | null;
 
@@ -186,6 +186,17 @@ export function RecruiterSessionsTable({ initialSessions, recruiterTimezone }: R
         }
     };
 
+    const formatDuration = (seconds?: number) => {
+        if (!seconds || seconds <= 0) return "0s";
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        const s = seconds % 60;
+
+        if (h > 0) return `${h}h ${m}m`;
+        if (m > 0) return `${m}m ${s}s`;
+        return `${s}s`;
+    };
+
     const formatTimestamp = (timestamp: number) => {
         const date = new Date(timestamp);
         try {
@@ -293,6 +304,14 @@ export function RecruiterSessionsTable({ initialSessions, recruiterTimezone }: R
                             </TableHead>
                             <TableHead>
                                 <button
+                                    onClick={() => handleSort('engagedTimeSeconds')}
+                                    className="flex items-center gap-1 hover:text-slate-900 transition-colors uppercase text-[11px] font-bold tracking-wider text-slate-500"
+                                >
+                                    Active <ArrowUpDown className="w-3 h-3" />
+                                </button>
+                            </TableHead>
+                            <TableHead>
+                                <button
                                     onClick={() => handleSort('created')}
                                     className="flex items-center gap-1 hover:text-slate-900 transition-colors uppercase text-[11px] font-bold tracking-wider text-slate-500"
                                 >
@@ -355,6 +374,9 @@ export function RecruiterSessionsTable({ initialSessions, recruiterTimezone }: R
                                             <TableCell className="text-slate-600">{session.role}</TableCell>
                                             <TableCell>{getStatusBadge(session)}</TableCell>
                                             <TableCell>{getReadinessBadge(session)}</TableCell>
+                                            <TableCell className="text-slate-500 whitespace-nowrap text-sm font-medium">
+                                                {formatDuration(session.engagedTimeSeconds)}
+                                            </TableCell>
                                             <TableCell className="text-slate-500 whitespace-nowrap text-sm">
                                                 {formatTimestamp(session.createdAt)}
                                             </TableCell>
@@ -423,6 +445,9 @@ export function RecruiterSessionsTable({ initialSessions, recruiterTimezone }: R
                                                 <TableCell className="text-slate-500 text-sm italic">Same as parent</TableCell>
                                                 <TableCell>{getStatusBadge(attempt)}</TableCell>
                                                 <TableCell>{getReadinessBadge(attempt)}</TableCell>
+                                                <TableCell className="text-slate-500 whitespace-nowrap text-sm">
+                                                    {formatDuration(attempt.engagedTimeSeconds)}
+                                                </TableCell>
                                                 <TableCell className="text-slate-500 whitespace-nowrap text-sm">
                                                     {formatTimestamp(attempt.createdAt)}
                                                 </TableCell>

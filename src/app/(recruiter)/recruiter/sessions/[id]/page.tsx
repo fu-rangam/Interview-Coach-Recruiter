@@ -116,6 +116,20 @@ export default async function SessionDetailsPage({ params }: { params: { id: str
                             <div className="text-lg font-semibold text-slate-900">{session.role}</div>
                         </div>
                         <div>
+                            <div className="text-sm font-medium text-slate-500 mb-1">Active Engagement</div>
+                            <div className="text-lg font-semibold text-blue-600">
+                                {(() => {
+                                    const seconds = session.engagedTimeSeconds || 0;
+                                    const h = Math.floor(seconds / 3600);
+                                    const m = Math.floor((seconds % 3600) / 60);
+                                    const s = seconds % 60;
+                                    if (h > 0) return `${h}h ${m}m`;
+                                    if (m > 0) return `${m}m ${s}s`;
+                                    return `${s}s`;
+                                })()}
+                            </div>
+                        </div>
+                        <div>
                             <div className="text-sm font-medium text-slate-500 mb-1">Status</div>
                             <div className="flex items-center gap-2 mt-1">
                                 {getReadinessIndicator(session)}

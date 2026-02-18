@@ -161,7 +161,8 @@ export class SupabaseSessionRepository implements SessionRepository {
                 attemptNumber: s.attempt_number || undefined,
                 clientName: s.client_name || undefined,
                 readinessBand: s.readiness_band as 'RL1' | 'RL2' | 'RL3' | 'RL4' | undefined,
-                summaryNarrative: s.summary_narrative || (s.readiness_band ? ReadinessAggregator.generateNarrative(s.readiness_band as 'RL1' | 'RL2' | 'RL3' | 'RL4') : undefined)
+                summaryNarrative: s.summary_narrative || (s.readiness_band ? ReadinessAggregator.generateNarrative(s.readiness_band as 'RL1' | 'RL2' | 'RL3' | 'RL4') : undefined),
+                engagedTimeSeconds: intake.engaged_time_seconds as number | undefined
             };
         });
     }

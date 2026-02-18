@@ -178,6 +178,7 @@ export interface SessionSummary {
     attempts?: SessionSummary[];
     readinessBand?: 'RL1' | 'RL2' | 'RL3' | 'RL4';
     summaryNarrative?: string;
+    engagedTimeSeconds?: number;
 }
 
 export interface SessionDashboardMetrics {

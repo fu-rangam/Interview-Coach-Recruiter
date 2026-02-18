@@ -24,7 +24,7 @@ export async function POST(
         }
 
         const answer = session.answers[params.question_id];
-        if (!answer?.submittedAt || !answer.transcript) {
+        if (!answer?.submittedAt) {
             return NextResponse.json({ error: "Answer not submitted" }, { status: 400 });
         }
 
@@ -42,7 +42,7 @@ export async function POST(
 
         const analysis = await AIService.analyzeAnswer(
             context.question,
-            answer.transcript,
+            answer.transcript || null,
             audioData || null,
             context.blueprint,
             session.intakeData,
@@ -56,6 +56,7 @@ export async function POST(
                 ...session.answers,
                 [params.question_id]: {
                     ...answer,
+                    transcript: analysis.transcript || answer.transcript,
                     analysis
                 }
             }

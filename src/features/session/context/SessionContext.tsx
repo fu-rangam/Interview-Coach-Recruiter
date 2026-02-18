@@ -126,9 +126,9 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
     };
 
     const saveAnswer = async (_qid: string, ans: { audioBlob?: Blob; text?: string; transcript?: string; analysis: AnalysisResult | null }) => {
-        if (ans.text) {
+        if (ans.text || ans.audioBlob) {
             tracker.flush();
-            await actions.submit(ans.text, ans.audioBlob);
+            await actions.submit(ans.text || "", ans.audioBlob);
         }
     };
 

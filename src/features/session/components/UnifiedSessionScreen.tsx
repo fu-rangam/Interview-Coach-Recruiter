@@ -188,6 +188,7 @@ export default function UnifiedSessionScreen() {
 
     const handleSubmit = async () => {
         const finalAnswer = mode === 'voice' ? transcript : answerText;
+        const canSubmitAudio = mode === 'voice' && audioBlob;
 
         // Detailed logging for production debugging via console
         console.log("[UnifiedSessionScreen] handleSubmit triggered", {
@@ -197,7 +198,7 @@ export default function UnifiedSessionScreen() {
             currentQuestionId
         });
 
-        if (!finalAnswer.trim()) {
+        if (!finalAnswer.trim() && !canSubmitAudio) {
             trackEvent('tier2', 'submit_blocked_empty');
             // Show a simple alert if in voice mode and transcript is missing
             if (mode === 'voice') {
@@ -466,7 +467,7 @@ export default function UnifiedSessionScreen() {
                                                                         Submitting...
                                                                     </>
                                                                 ) : (
-                                                                    "Submit Answer"
+                                                                    transcript ? "Submit Answer" : "Submit Recording"
                                                                 )}
                                                             </Button>
                                                         </div>
@@ -486,7 +487,7 @@ export default function UnifiedSessionScreen() {
                                                 )}
 
                                                 <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 tracking-wide uppercase">
-                                                    {isRecording ? "Listening..." : transcript ? "Ready to submit" : "Tap to Speak"}
+                                                    {isRecording ? "Listening..." : transcript ? "Ready to submit" : audioBlob ? "Audio Captured" : "Tap to Speak"}
                                                 </p>
                                             </div>
 
