@@ -1,0 +1,66 @@
+'use client';
+
+import { motion } from 'framer-motion';
+import { useEffect, useState } from 'react';
+
+const fonts = [
+    { className: 'font-tech pl-[0.1em]', label: 'Work', scale: 0.98, yOffset: '-0.052em' },
+    { className: 'font-classic', label: 'Work', scale: 1.07, yOffset: '-0.088em' },
+    { className: 'font-academic', label: 'Work', scale: 1.25, yOffset: '-0.103em' },
+    { className: 'font-industrial pl-[0.05em]', label: 'Work', scale: 1.02, yOffset: '-0.105em' },
+    { className: 'font-signage', label: 'Work', scale: 1.03, yOffset: '0.04em' },
+    { className: 'font-display font-bold tracking-tighter', label: 'Work', scale: 1.0, yOffset: '-0.07em' },
+];
+
+export default function WorkReel() {
+    const [index, setIndex] = useState(0);
+    // Increased slot height from 1em to 1.6em to provide vertical "leak protection" buffer
+    const slotHeight = 1.6;
+
+    useEffect(() => {
+        // Delay interval start to match parent's entrance transition (1.0s) + pause (0.1s)
+        const delayTimer = setTimeout(() => {
+            const timer = setInterval(() => {
+                setIndex((prev) => {
+                    if (prev >= fonts.length - 1) {
+                        clearInterval(timer);
+                        return prev;
+                    }
+                    return prev + 1;
+                });
+            }, 300);
+            return () => clearInterval(timer);
+        }, 1300);
+
+        return () => clearTimeout(delayTimer);
+    }, []);
+
+    return (
+        <span className="relative flex flex-col overflow-hidden h-[1.2em] w-[20rem]">
+            <motion.span
+                animate={{ y: -(index * slotHeight + (slotHeight - 1.2) / 2) + 'em' }}
+                transition={{
+                    type: "spring",
+                    stiffness: 500,
+                    damping: 40,
+                    mass: 0.8
+                }}
+                className="flex flex-col"
+            >
+                {fonts.map((f, i) => (
+                    <span
+                        key={i}
+                        className={`flex items-center justify-start ${f.className} text-brand-deep whitespace-nowrap leading-none transition-all duration-300`}
+                        style={{
+                            height: `${slotHeight}em`,
+                            transform: `scale(${f.scale}) translateY(${f.yOffset})`,
+                            transformOrigin: 'left center'
+                        }}
+                    >
+                        {f.label}
+                    </span>
+                ))}
+            </motion.span>
+        </span>
+    );
+}

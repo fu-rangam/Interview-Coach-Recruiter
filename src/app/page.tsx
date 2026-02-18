@@ -1,6 +1,12 @@
+'use client';
+
 import Link from 'next/link';
+
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
+import { motion } from 'framer-motion';
+import BrandLogo from '@/components/brand/BrandLogo';
+
 
 export default function Home() {
     return (
@@ -16,7 +22,12 @@ export default function Home() {
                 <div className="flex flex-col items-center gap-1">
 
                     {/* Hero Logo (Orb) */}
-                    <div className="relative w-24 h-24 mb-6 drop-shadow-2xl">
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.8, ease: "easeOut" }}
+                        className="relative w-24 h-24 mb-6"
+                    >
                         <Image
                             src="/r2w-logo.webp"
                             alt="Ready2Work Logo"
@@ -24,16 +35,19 @@ export default function Home() {
                             className="object-contain"
                             priority
                         />
-                    </div>
+                    </motion.div>
 
-                    <h1 className="text-6xl md:text-8xl font-bold tracking-tighter font-display pb-4 leading-none select-none">
-                        <span className="text-[#3b82f6]">Ready</span>
-                        <span className="text-[#F95500]">2</span>
-                        <span className="text-brand-deep">Work</span>
-                    </h1>
+                    <BrandLogo />
+
+
 
                     {/* Tagline Lockup */}
-                    <div className="flex flex-row items-center justify-center gap-[0.4rem] text-lg md:text-xl text-muted-foreground/80 font-medium tracking-wide whitespace-nowrap">
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 1.0, duration: 0.8 }}
+                        className="flex flex-row items-center justify-center gap-[0.4rem] text-lg md:text-xl text-muted-foreground/80 font-medium tracking-wide whitespace-nowrap"
+                    >
                         <span className="uppercase text-[10px] sm:text-xs md:text-base tracking-[0.1em] opacity-80 translate-y-[1px]">
                             Workforce Readiness Powered By
                         </span>
@@ -45,11 +59,16 @@ export default function Home() {
                                 className="object-contain"
                             />
                         </div>
-                    </div>
+                    </motion.div>
                 </div>
 
                 {/* Actions */}
-                <div className="w-full max-w-sm space-y-8">
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 3.0, duration: 0.8, ease: "easeOut" }}
+                    className="w-full max-w-sm space-y-8"
+                >
                     <Link href="/recruiter" className="w-full block">
                         <Button className="w-full h-14 text-lg rounded-full shadow-lg shadow-blue-900/20 hover:shadow-blue-900/40 hover:-translate-y-0.5 transition-all" size="lg">
                             Continue as Recruiter
@@ -66,7 +85,7 @@ export default function Home() {
                             Candidates must use the unique invitation link sent to their email.
                         </p>
                     </div>
-                </div>
+                </motion.div>
             </div>
 
             {/* Bottom Spacer */}

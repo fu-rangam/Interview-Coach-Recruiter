@@ -155,9 +155,6 @@ export const MultiStepLoader = ({
                         exit={{ opacity: 0, scale: 0.9, y: 20 }}
                         className="relative w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] rounded-[2.5rem] flex flex-col items-center justify-center p-10 overflow-hidden"
                     >
-                        {/* Decorative Glow */}
-                        <div className="absolute -top-24 -left-24 w-48 h-48 bg-blue-500/10 dark:bg-blue-400/5 rounded-full blur-[80px] pointer-events-none" />
-                        <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-emerald-500/10 dark:bg-emerald-400/5 rounded-full blur-[80px] pointer-events-none" />
 
                         <div className="relative z-10 w-full">
                             <h3 className="text-center text-sm font-bold text-slate-500 dark:text-white/40 mb-10">

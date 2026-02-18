@@ -1,11 +1,18 @@
 import type { Metadata, Viewport } from 'next'
-import { Inter } from 'next/font/google'
+import { Inter, JetBrains_Mono, EB_Garamond, Crimson_Pro, Barlow_Condensed, Overpass } from 'next/font/google'
+
 import '@/index.css' // Import global styles
 import { cn } from '@/lib/cn'
 import { ScrollToTop } from '@/components/navigation/ScrollToTop'
 import NextTopLoader from 'nextjs-toploader'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' })
+const tech = JetBrains_Mono({ subsets: ['latin'], variable: '--font-tech' })
+const classic = EB_Garamond({ subsets: ['latin'], variable: '--font-classic' })
+const academic = Crimson_Pro({ subsets: ['latin'], variable: '--font-academic' })
+const industrial = Barlow_Condensed({ subsets: ['latin'], weight: ['400', '700'], variable: '--font-industrial' })
+const signage = Overpass({ subsets: ['latin'], variable: '--font-signage' })
+
 
 export const viewport: Viewport = {
     width: 'device-width',
@@ -36,7 +43,16 @@ export default function RootLayout({
 }) {
     return (
         <html lang="en">
-            <body className={cn("min-h-screen bg-background font-sans antialiased", inter.variable)}>
+            <body className={cn(
+                "min-h-screen bg-background font-sans antialiased",
+                inter.variable,
+                tech.variable,
+                classic.variable,
+                academic.variable,
+                industrial.variable,
+                signage.variable
+            )}>
+
                 <NextTopLoader
                     color="#08409a"
                     initialPosition={0.08}
