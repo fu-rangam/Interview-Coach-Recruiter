@@ -43,7 +43,9 @@ export default function CreateInviteWizard() {
     const [recruiterProfile, setRecruiterProfile] = useState<RecruiterProfile>({
         name: "",
         email: "",
-        phone: ""
+        phone: "",
+        title: "",
+        company: "Rangam Consultants Inc."
     });
 
     // Fetch Recruiter Profile
@@ -67,7 +69,9 @@ export default function CreateInviteWizard() {
                 setRecruiterProfile({
                     name: name || "Recruiter",
                     email: user.email || "",
-                    phone: data?.phone || ""
+                    phone: data?.phone || "",
+                    title: data?.title || "Recruiter",
+                    company: data?.company || "Rangam Consultants Inc."
                 });
             }
         };

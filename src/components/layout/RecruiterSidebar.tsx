@@ -40,7 +40,11 @@ export function RecruiterSidebar({ className, onNavigate, user, profile }: Recru
     return (
         <aside className={cn("bg-white border-r flex flex-col h-screen sticky top-0", className)}>
             <div className="p-6 pb-0">
-                <div className="mb-8 flex items-center gap-3">
+                <Link
+                    href="/"
+                    className="mb-8 flex items-center gap-3 hover:opacity-80 transition-opacity"
+                    onClick={onNavigate}
+                >
                     <div className="relative w-8 h-8">
                         <Image
                             src="/r2w-logo.webp"
@@ -55,7 +59,7 @@ export function RecruiterSidebar({ className, onNavigate, user, profile }: Recru
                         <span className="text-[#F95500]">2</span>
                         <span className="text-brand-deep">Work</span>
                     </h1>
-                </div>
+                </Link>
 
                 <div className="mb-6 pb-6 border-b">
                     <div className="text-sm font-semibold text-muted-foreground uppercase tracking-widest mb-1">

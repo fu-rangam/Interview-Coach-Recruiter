@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google'
 import '@/index.css' // Import global styles
 import { cn } from '@/lib/cn'
 import { ScrollToTop } from '@/components/navigation/ScrollToTop'
+import NextTopLoader from 'nextjs-toploader'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' })
 
@@ -36,6 +37,17 @@ export default function RootLayout({
     return (
         <html lang="en">
             <body className={cn("min-h-screen bg-background font-sans antialiased", inter.variable)}>
+                <NextTopLoader
+                    color="#08409a"
+                    initialPosition={0.08}
+                    crawlSpeed={200}
+                    height={3}
+                    crawl={true}
+                    showSpinner={false}
+                    easing="ease"
+                    speed={200}
+                    shadow="0 0 10px #08409a,0 0 5px #08409a"
+                />
                 <ScrollToTop />
                 {children}
             </body>

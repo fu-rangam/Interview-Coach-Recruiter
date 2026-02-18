@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 import { createClient, getCachedUser } from "@/lib/supabase/server";
 import { RecruiterSessionsTable } from "./components/RecruiterSessionsTable";
+import { ReadinessLegend } from "./components/ReadinessLegend";
 import { redirect } from "next/navigation";
 
 export const dynamic = 'force-dynamic';
@@ -34,6 +35,8 @@ export default async function RecruiterDashboard() {
                     </Link>
                 </Button>
             </div>
+
+            <ReadinessLegend />
 
             <Card className="border-none shadow-none bg-transparent">
                 <CardHeader className="px-0 pt-0">

@@ -68,6 +68,26 @@ function getReadinessIndicator(session: InterviewSession) {
     </Badge>;
 }
 
+function getReadinessBadge(session: InterviewSession) {
+    const rl = session.readinessBand;
+    if (!rl) return null;
+
+    const commonClasses = "w-[145px] justify-center text-center text-[10px] uppercase font-bold tracking-tight";
+
+    switch (rl) {
+        case 'RL1':
+            return <Badge variant="outline" className={`${commonClasses} text-emerald-700 border-emerald-200 bg-emerald-50`}>Ready</Badge>;
+        case 'RL2':
+            return <Badge variant="outline" className={`${commonClasses} text-blue-700 border-blue-200 bg-blue-50`}>Strong Potential</Badge>;
+        case 'RL3':
+            return <Badge variant="outline" className={`${commonClasses} text-amber-700 border-amber-200 bg-amber-50`}>Practice Recommended</Badge>;
+        case 'RL4':
+            return <Badge variant="outline" className={`${commonClasses} text-slate-500 border-slate-200 bg-slate-50`}>Incomplete</Badge>;
+        default:
+            return <Badge variant="outline" className={`${commonClasses} text-slate-400 border-slate-200`}>Analyzing...</Badge>;
+    }
+}
+
 export default async function SessionDetailsPage({ params }: { params: { id: string } }) {
     const user = await getCachedUser();
     if (!user) redirect("/login");
@@ -105,7 +125,7 @@ export default async function SessionDetailsPage({ params }: { params: { id: str
                     <CardTitle>Candidate Summary</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                         <div>
                             <div className="text-sm font-medium text-slate-500 mb-1">Candidate</div>
                             <div className="text-lg font-semibold text-slate-900">{session.candidateName || "Anonymous"}</div>
@@ -130,9 +150,17 @@ export default async function SessionDetailsPage({ params }: { params: { id: str
                             </div>
                         </div>
                         <div>
-                            <div className="text-sm font-medium text-slate-500 mb-1">Status</div>
-                            <div className="flex items-center gap-2 mt-1">
-                                {getReadinessIndicator(session)}
+                            <div className="text-sm font-medium text-slate-500 mb-1">Status & Readiness</div>
+                            <div className="flex flex-col gap-2 mt-1">
+                                <div className="flex items-center gap-2">
+                                    {getReadinessIndicator(session)}
+                                    {getReadinessBadge(session)}
+                                </div>
+                                {session.summaryNarrative && (
+                                    <p className="text-xs text-slate-500 italic leading-relaxed max-w-xs">
+                                        &ldquo;{session.summaryNarrative}&rdquo;
+                                    </p>
+                                )}
                             </div>
                         </div>
                     </div>
