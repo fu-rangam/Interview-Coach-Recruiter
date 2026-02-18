@@ -147,11 +147,11 @@ export function StepJobAndQuestions({
                 <Card>
                     <CardHeader><CardTitle>STAR Questions (Behavioral)</CardTitle></CardHeader>
                     <CardContent className="space-y-3">
-                        {star.map(q => (
+                        {star.map((q, idx) => (
                             <div key={q.id}>
                                 <input className="flex h-10 w-full rounded-md border bg-muted/50 px-3 placeholder:text-muted-foreground/70 focus:outline-none focus:ring-1 focus:ring-slate-400 focus:border-slate-400"
                                     value={q.text} onChange={e => updateQuestion(setStar, star, q.id, e.target.value)}
-                                    placeholder={`${q.label} Question...`} />
+                                    placeholder={`STAR Question ${idx + 1}...`} />
                             </div>
                         ))}
                     </CardContent>
