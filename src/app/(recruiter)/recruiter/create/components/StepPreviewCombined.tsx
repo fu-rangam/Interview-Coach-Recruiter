@@ -46,49 +46,58 @@ export function StepPreviewCombined({
             <div className="grid grid-cols-1 gap-6">
                 {/* Job & Questions Summary */}
                 <Card>
-                    <CardHeader className="flex flex-row items-center justify-between py-4 border-b bg-slate-50/50">
-                        <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">Job Details</Badge>
-                            <span className="font-semibold text-slate-700">{details.role}</span>
-                            <span className="text-slate-400">|</span>
-                            <span className="text-slate-500 font-mono text-xs">{details.reqId}</span>
+                    <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-4 border-b bg-slate-50/50 gap-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 shrink-0 w-fit">Job Details</Badge>
+                            <span className="font-semibold text-slate-700 truncate">{details.role}</span>
+                            <span className="hidden sm:inline text-slate-400">|</span>
+                            <span className="text-slate-500 font-mono text-xs opacity-70 sm:opacity-100">{details.reqId}</span>
                         </div>
                         {setDetailStep && (
-                            <Button variant="ghost" size="sm" onClick={setDetailStep} className="h-8 text-slate-500">
+                            <Button variant="ghost" size="sm" onClick={setDetailStep} className="hidden sm:flex h-8">
                                 <Edit className="w-3 h-3 mr-1" /> Edit
                             </Button>
                         )}
                     </CardHeader>
                     <CardContent className="pt-4 space-y-4">
-                        <div className="grid grid-cols-3 gap-4 text-sm">
-                            <div className="bg-slate-50 p-3 rounded border">
-                                <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Behavioral</span>
+                        <div className="grid grid-cols-3 gap-3 sm:gap-4 text-sm">
+                            <div className="bg-slate-50 p-2 sm:p-3 rounded border text-center sm:text-left">
+                                <span className="block text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 truncate">Behavioral</span>
                                 <span className="text-lg font-semibold text-slate-700">{activeStar.length}</span>
                             </div>
-                            <div className="bg-slate-50 p-3 rounded border">
-                                <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Culture</span>
+                            <div className="bg-slate-50 p-2 sm:p-3 rounded border text-center sm:text-left">
+                                <span className="block text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 truncate">Culture</span>
                                 <span className="text-lg font-semibold text-slate-700">{activePerma.length}</span>
                             </div>
-                            <div className="bg-slate-50 p-3 rounded border">
-                                <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Technical</span>
+                            <div className="bg-slate-50 p-2 sm:p-3 rounded border text-center sm:text-left">
+                                <span className="block text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 truncate">Technical</span>
                                 <span className="text-lg font-semibold text-slate-700">{activeTechnical.length}</span>
                             </div>
                         </div>
                         <div className="text-xs text-slate-500">
                             Total {totalQuestions} questions configured.
                         </div>
+
+                        {setDetailStep && (
+                            <Button variant="ghost" size="sm" onClick={setDetailStep} className="sm:hidden w-full h-12 border border-dashed border-slate-200 mt-2">
+                                <Edit className="w-3.5 h-3.5 mr-2" /> Edit Job Details / Questions
+                            </Button>
+                        )}
                     </CardContent>
                 </Card>
 
                 {/* Candidates Summary */}
                 <Card>
-                    <CardHeader className="flex flex-row items-center justify-between py-4 border-b bg-slate-50/50">
-                        <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">Candidates</Badge>
-                            <span className="font-semibold text-slate-700">{candidates.length} Recipients</span>
+                    <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-4 border-b bg-slate-50/50 gap-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                            <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 shrink-0">Candidates</Badge>
+                                <span className="font-semibold text-slate-700 sm:hidden">{candidates.length} Recipients</span>
+                            </div>
+                            <span className="hidden sm:inline font-semibold text-slate-700">{candidates.length} Recipients</span>
                         </div>
                         {setCandidateStep && (
-                            <Button variant="ghost" size="sm" onClick={setCandidateStep} className="h-8 text-slate-500">
+                            <Button variant="ghost" size="sm" onClick={setCandidateStep} className="hidden sm:flex h-8">
                                 <Edit className="w-3 h-3 mr-1" /> Edit
                             </Button>
                         )}
@@ -105,6 +114,12 @@ export function StepPreviewCombined({
                                 </div>
                             ))}
                         </div>
+
+                        {setCandidateStep && (
+                            <Button variant="ghost" size="sm" onClick={setCandidateStep} className="sm:hidden w-full h-12 border border-dashed border-slate-200 mt-4">
+                                <Edit className="w-3.5 h-3.5 mr-2" /> Edit Candidates
+                            </Button>
+                        )}
                     </CardContent>
                 </Card>
             </div>

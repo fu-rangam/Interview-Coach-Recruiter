@@ -151,17 +151,25 @@ export default function CreateInviteWizard() {
 
     const StepFooter = ({ onBack, onNext, nextLabel, isNextDisabled, customAction }: { onBack?: () => void, onNext: () => void, nextLabel: string | React.ReactNode, isNextDisabled?: boolean, customAction?: React.ReactNode }) => (
         <div className="mt-6 pt-6 border-t">
-            <div className="flex justify-between items-center w-full">
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-between items-stretch sm:items-center gap-4 w-full">
                 <div>
                     {onBack && (
-                        <Button variant="outline" onClick={onBack}>
+                        <Button
+                            variant="outline"
+                            onClick={onBack}
+                            className="w-full sm:w-auto h-12 sm:h-10"
+                        >
                             <ChevronLeft className="w-4 h-4 mr-2" /> Back
                         </Button>
                     )}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-3">
                     {customAction}
-                    <Button onClick={onNext} disabled={isNextDisabled}>
+                    <Button
+                        onClick={onNext}
+                        disabled={isNextDisabled}
+                        className="w-full sm:w-auto h-12 sm:h-10 text-base sm:text-sm font-semibold shadow-md"
+                    >
                         {nextLabel}
                     </Button>
                 </div>

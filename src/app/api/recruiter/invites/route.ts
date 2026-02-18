@@ -75,11 +75,16 @@ export async function POST(request: Request) {
                 await repository.create(invite);
             }
 
+            // Derive Base URL: Prioritize Env Var, fallback to Request Headers
+            const host = request.headers.get("host") || "localhost:3000";
+            const protocol = request.headers.get("x-forwarded-proto") || "http";
+            const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://${host}`;
+
             results.push({
                 firstName: candidate.firstName,
                 lastName: candidate.lastName,
                 email: candidate.email,
-                link: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/s/${token}`
+                link: `${baseUrl}/s/${token}`
             });
         }
 

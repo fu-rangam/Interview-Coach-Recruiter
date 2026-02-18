@@ -62,15 +62,16 @@ export function StepJobAndQuestions({
 
     return (
         <div className="space-y-8">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h2 className="text-2xl font-bold font-display">Step 1: Job Details & Questions</h2>
-                    <p className="text-muted-foreground">Define the role and interview questions.</p>
-                </div>
-                {/* Dev & Template Controls */}
-                <div className="flex gap-2 items-center">
+            <div className="flex flex-col gap-6">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h2 className="text-2xl font-bold font-display">Step 1: Job Details & Questions</h2>
+                        <p className="text-muted-foreground">Define the role and interview questions.</p>
+                    </div>
+
+                    {/* Dev Controls (Keep separate from Template Select) */}
                     {isDev && (
-                        <>
+                        <div className="flex gap-2 items-center">
                             {onRandomizeJob && (
                                 <button
                                     onClick={onRandomizeJob}
@@ -92,16 +93,19 @@ export function StepJobAndQuestions({
                                     )}
                                 </button>
                             )}
-                        </>
+                        </div>
                     )}
+                </div>
 
-                    {/* Placeholder for Template Select */}
+                {/* Template Select - Now Stacked Below */}
+                <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Apply Template:</span>
                     <div className="relative">
                         <select
-                            className="h-8 rounded-md border text-xs px-2 bg-white text-slate-600 focus:outline-none focus:ring-1 focus:ring-slate-400"
+                            className="h-9 min-w-[200px] rounded-md border text-xs px-3 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm"
                             defaultValue=""
                         >
-                            <option value="" disabled>Use a Template...</option>
+                            <option value="" disabled>Select a Template...</option>
                             <option value="temp1">Product Manager</option>
                             <option value="temp2">Software Engineer</option>
                         </select>
@@ -215,8 +219,8 @@ export function StepJobAndQuestions({
                 nextLabel={<>Next: Add Candidates <ChevronRight className="ml-2 w-4 h-4" /></>}
                 isNextDisabled={isNextDisabled}
                 customAction={
-                    <Link href="/recruiter/templates">
-                        <Button variant="outline" className="text-slate-600">
+                    <Link href="/recruiter/templates" className="w-full sm:w-auto block">
+                        <Button variant="outline" className="text-slate-600 w-full h-12 sm:h-10">
                             <Save className="w-4 h-4 mr-2" />
                             Save as Template
                         </Button>

@@ -68,7 +68,7 @@ export function CategoryTooltip({ category, children }: CategoryTooltipProps) {
                         initial={{ opacity: 0, y: -10, scale: 0.95 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -5, scale: 0.95 }}
-                        className="absolute left-0 top-full mt-3 z-50 min-w-max max-w-[90vw] md:max-w-md p-4 bg-slate-900 text-white rounded-xl shadow-2xl border border-white/10"
+                        className="absolute left-0 -translate-x-4 md:translate-x-0 top-full mt-3 z-50 min-w-max max-w-[calc(100vw-2rem)] md:max-w-md p-4 bg-slate-900 text-white rounded-xl shadow-2xl border border-white/10"
                         onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside tooltip
                     >
                         <h4 className="font-bold text-sm mb-1 text-blue-400 whitespace-nowrap">{info.title}</h4>
@@ -77,7 +77,7 @@ export function CategoryTooltip({ category, children }: CategoryTooltipProps) {
                         </p>
 
                         {/* Tooltip Arrow - Top */}
-                        <div className="absolute bottom-full left-6 -mb-px border-8 border-transparent border-b-slate-900" />
+                        <div className="absolute bottom-full left-8 md:left-6 -mb-px border-8 border-transparent border-b-slate-900" />
                     </motion.div>
                 )}
             </AnimatePresence>
