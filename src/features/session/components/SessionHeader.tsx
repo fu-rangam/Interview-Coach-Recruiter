@@ -1,19 +1,17 @@
 import React from 'react';
 import { useSession } from '../context/SessionContext';
 import { X } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 
 export function SessionHeader() {
-    const { session, trackEvent } = useSession();
-    const router = useRouter();
+    const { session, trackEvent, updateSession } = useSession();
 
     if (!session) return null;
     const { questions, currentQuestionIndex } = session;
 
-    const handleExit = () => {
+    const handleExit = async () => {
         if (window.confirm("Are you sure you want to exit? Your progress is saved.")) {
             trackEvent('tier2', 'session_stop_early');
-            router.push('/dashboard');
+            await updateSession(session.id, { status: 'PAUSED' });
         }
     };
 

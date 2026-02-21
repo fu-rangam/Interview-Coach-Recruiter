@@ -6,6 +6,7 @@ import { Plus, Trash2, Loader2, Save } from "lucide-react";
 import { Details, QuestionInput, StepFooterProps } from "../constants";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
+import { showDemoTools } from "@/lib/feature-flags";
 
 interface StepJobAndQuestionsProps {
     details: Details;
@@ -34,7 +35,7 @@ export function StepJobAndQuestions({
     isGeneratingQuestions,
     StepFooter
 }: StepJobAndQuestionsProps) {
-    const isDev = process.env.NODE_ENV === 'development';
+    const isDemo = showDemoTools();
 
     const addTechnical = () => {
         setTechnical([...technical, {
@@ -69,8 +70,8 @@ export function StepJobAndQuestions({
                         <p className="text-muted-foreground">Define the role and interview questions.</p>
                     </div>
 
-                    {/* Dev Controls (Keep separate from Template Select) */}
-                    {isDev && (
+                    {/* Demo Tools (formerly Dev Only) */}
+                    {isDemo && (
                         <div className="flex gap-2 items-center">
                             {onRandomizeJob && (
                                 <button

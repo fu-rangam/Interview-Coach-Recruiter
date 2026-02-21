@@ -8,6 +8,12 @@ import { revalidatePath } from "next/cache";
 
 const sessionRepo = new SupabaseSessionRepository();
 
+export async function getRecruiterMetrics() {
+    const user = await getCachedUser();
+    if (!user) redirect("/login");
+    return sessionRepo.getDashboardMetrics(user.id);
+}
+
 export async function getRecruiterSessions(): Promise<SessionSummary[]> {
     const user = await getCachedUser();
 
@@ -18,41 +24,22 @@ export async function getRecruiterSessions(): Promise<SessionSummary[]> {
     try {
         const allSessions = await sessionRepo.listByRecruiter(user.id);
 
-        // Consolidate lineage
-        const rootMap = new Map<string, SessionSummary>();
-        const children: SessionSummary[] = [];
+        // Map to quickly find parent sessions
+        const sessionMap = new Map<string, SessionSummary>(allSessions.map(s => [s.id, s]));
 
-        allSessions.forEach(s => {
-            if (!s.parentSessionId) {
-                rootMap.set(s.id, { ...s, attempts: [] });
-            } else {
-                children.push(s);
-            }
-        });
-
-        // Handle children whose roots haven't been processed or found
-        children.forEach(c => {
-            const root = rootMap.get(c.parentSessionId!);
-            if (root) {
-                // Fallback candidate name if child is anonymous
-                if (c.candidateName === "Anonymous Candidate") {
-                    c.candidateName = root.candidateName;
+        // Resolve "Anonymous Candidate" for children from their parents
+        const resolvedSessions = allSessions.map(s => {
+            if (s.candidateName === "Anonymous Candidate" && s.parentSessionId) {
+                const parent = sessionMap.get(s.parentSessionId);
+                if (parent) {
+                    return { ...s, candidateName: parent.candidateName };
                 }
-                root.attempts = root.attempts || [];
-                root.attempts.push(c);
-            } else {
-                // Fallback: This child has no root in the list, treat as its own root
-                rootMap.set(c.id, { ...c, attempts: [] });
             }
+            return s;
         });
 
-        // Sort root sessions by creation date
-        return Array.from(rootMap.values())
-            .map(r => ({
-                ...r,
-                attempts: r.attempts?.sort((a, b) => (a.attemptNumber || 0) - (b.attemptNumber || 0))
-            }))
-            .sort((a, b) => b.createdAt - a.createdAt);
+        // Sort by creation date (newest first)
+        return resolvedSessions.sort((a, b) => b.createdAt - a.createdAt);
     } catch (error) {
         console.error("Failed to fetch sessions:", error);
         return [];

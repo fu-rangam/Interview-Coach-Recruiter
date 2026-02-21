@@ -14,7 +14,8 @@ export interface StrongResponseState {
 export function useStrongResponse(
     questionId: string,
     questionText: string,
-    tips: QuestionTips | null
+    tips: QuestionTips | null,
+    role: string
 ) {
     const [state, setState] = useState<StrongResponseState>({
         data: null,
@@ -46,7 +47,7 @@ export function useStrongResponse(
             const response = await fetch('/api/response/generate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ question: questionText, tips }),
+                body: JSON.stringify({ question: questionText, tips, role: role }),
             });
 
             if (!response.ok) {
@@ -74,7 +75,7 @@ export function useStrongResponse(
                 error: errorMessage,
             });
         }
-    }, [questionId, questionText, tips]);
+    }, [questionId, questionText, tips, role]);
 
     // Auto-load when tips become available
     useEffect(() => {

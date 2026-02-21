@@ -18,10 +18,10 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        const { question, tips } = result.data;
+        const { question, tips, role } = result.data;
 
         // Generate content
-        const data = await StrongResponseService.generateStrongResponse(question, tips);
+        const data = await StrongResponseService.generateStrongResponse(question, tips, role || "Professional");
 
         return NextResponse.json(data);
 

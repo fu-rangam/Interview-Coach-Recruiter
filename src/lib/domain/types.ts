@@ -146,6 +146,7 @@ export interface InterviewSession {
     };
     inviteToken?: string; // Persisted plain token for "Copy Link"
     viewedAt?: number;
+    updatedAt?: number;
     engagedTimeSeconds?: number;
     engagedTimeDelta?: number;
     intakeData?: Record<string, unknown>; // Full intake JSON for context
@@ -168,6 +169,7 @@ export interface SessionSummary {
     answerCount: number;
     submittedCount: number;
     viewedAt?: number;
+    updatedAt?: number;
     enteredInitials?: string;
     inviteToken?: string;
 
@@ -186,7 +188,8 @@ export interface SessionDashboardMetrics {
     activeSessions: number;
     completedSessions: number;
     stalledSessions: number;
-    // Future expansion:
-    // activityByDate: ...
-    // questionPerformance: ...
+    averageEngagementTimeSeconds: number;
+    readinessDistribution: Record<'RL1' | 'RL2' | 'RL3' | 'RL4', number>;
+    coachingFocusDistribution: Record<string, number>;
+    commonObservations: { text: string; count: number }[];
 }

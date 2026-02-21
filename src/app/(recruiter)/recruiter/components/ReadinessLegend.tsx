@@ -6,8 +6,9 @@ import { Info } from "lucide-react";
 
 export function ReadinessLegend() {
     return (
-        <div className="bg-white border border-blue-600 rounded-2xl p-6 shadow-sm ring-1 ring-blue-50/50">
-            <div className="flex items-center gap-2 mb-4">
+        <div className="bg-gradient-to-br from-[#e8f1fd] to-[#d1e3fa] rounded-2xl p-6 shadow-sm ring-1 ring-white/20 relative overflow-hidden">
+            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-200 to-blue-600" />
+            <div className="flex items-center gap-2 mb-4 relative z-10">
                 <Info className="w-4 h-4 text-blue-600" />
                 <h4 className="text-xs font-bold uppercase tracking-wider text-blue-600">Key to Readiness Ratings</h4>
             </div>

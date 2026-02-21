@@ -3,6 +3,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Details, StepFooterProps } from "../constants";
 import { ChevronRight } from "lucide-react";
+import { showDemoTools } from "@/lib/feature-flags";
 
 interface StepDetailsProps {
     details: Details;
@@ -14,7 +15,7 @@ interface StepDetailsProps {
 }
 
 export function StepDetails({ details, setDetails, onNext, onRandomizeCandidate, onRandomizeJob, StepFooter }: StepDetailsProps) {
-    const isDev = process.env.NODE_ENV === 'development';
+    const isDemo = showDemoTools();
 
     return (
         <div className="space-y-6">
@@ -23,8 +24,8 @@ export function StepDetails({ details, setDetails, onNext, onRandomizeCandidate,
                 <p className="text-muted-foreground">Enter the details for this interview session.</p>
             </div>
 
-            {/* Dev Quick-Fill Buttons */}
-            {isDev && (
+            {/* Demo Tools (formerly Dev Only) */}
+            {isDemo && (
                 <div className="flex gap-2">
                     {onRandomizeCandidate && (
                         <button

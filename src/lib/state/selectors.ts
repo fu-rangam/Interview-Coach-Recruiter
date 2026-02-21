@@ -11,7 +11,7 @@ export function selectNow(session?: InterviewSession | null): NowState {
             isComplete: false,
             currentQuestionIndex: 0,
             totalQuestions: 0,
-            screen: "ERROR",
+            screen: "LANDING", // Optimistic default while loading
         };
     }
 
@@ -51,12 +51,8 @@ export function selectNow(session?: InterviewSession | null): NowState {
         // Determine sub-state based on Data, not just Status Enum (which is limited in DB)
         if (currentAns?.analysis) {
             screen = "REVIEW_FEEDBACK";
-        } else if (status === "AWAITING_EVALUATION") {
-            // Transient state (memory only usually)
-            screen = "PENDING_EVALUATION";
-        } else if (currentAns?.submittedAt && !currentAns.analysis) {
-            // If answer submitted but no analysis, we are effectively pending evaluation
-            // This covers the case where DB says "IN_SESSION" but we are waiting for AI
+        } else if (status === "AWAITING_EVALUATION" || (currentAns?.submittedAt && !currentAns.analysis)) {
+            // Transient state or submitted but not yet analyzed
             screen = "PENDING_EVALUATION";
         } else if (status === "REVIEWING") {
             screen = "REVIEW_FEEDBACK";

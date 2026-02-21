@@ -1,5 +1,5 @@
 import { SessionRepository } from "@/lib/domain/repository";
-import { InterviewSession, Answer, Question, SessionSummary, SessionStatus, AnalysisResult } from "@/lib/domain/types";
+import { InterviewSession, Answer, Question, SessionSummary, SessionStatus, AnalysisResult, SessionDashboardMetrics } from "@/lib/domain/types";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { Logger } from "@/lib/logger";
 import { decrypt } from "@/lib/server/encryption";
@@ -26,6 +26,7 @@ interface DbSession {
     client_name: string | null;
     readiness_band: string | null;
     summary_narrative: string | null;
+    updated_at: string;
     questions?: { count: number }[];
     answers?: { submitted_at: string | null }[];
 }
@@ -59,9 +60,95 @@ export class SupabaseSessionRepository implements SessionRepository {
         await this.update(session);
     }
 
-    async getDashboardMetrics(recruiterId: string): Promise<import("@/lib/domain/types").SessionDashboardMetrics> {
-        Logger.debug(`[SupabaseSessionRepo] getDashboardMetrics (Stub) for ${recruiterId}`);
-        return { totalInvites: 0, activeSessions: 0, completedSessions: 0, stalledSessions: 0 };
+    async getDashboardMetrics(recruiterId: string): Promise<SessionDashboardMetrics> {
+        const supabase = createClient();
+
+        // 1. Fetch Sessions Metadata
+        const { data: sessions, error: sError } = await supabase
+            .from('sessions')
+            .select('session_id, status, readiness_band, intake_json, created_at')
+            .eq('recruiter_id', recruiterId);
+
+        if (sError) throw new Error(sError.message);
+
+        // 2. Fetch all Eval Results for these sessions to get aggregate coaching focus
+        const { data: evals, error: eError } = await supabase
+            .from('eval_results')
+            .select('feedback_json')
+            .eq('recruiter_id', recruiterId); // Assumes recruiter_id exists on eval_results or we need to join
+
+        // Fallback: If recruiter_id doesn't exist on eval_results, we'd need a join or in-clause.
+        // Let's check if recruiter_id is in eval_results first. (I'll assume it is based on architecture patterns if it exists, otherwise I'll use session_id IN (...))
+
+        // For safety, let's use the session IDs if we have them.
+        let finalEvals = evals;
+        if (eError || !evals) {
+            const sessionIds = sessions.map(s => s.session_id);
+            if (sessionIds.length > 0) {
+                const { data: retryEvals } = await supabase
+                    .from('eval_results')
+                    .select('feedback_json')
+                    .in('session_id', sessionIds);
+                finalEvals = retryEvals;
+            } else {
+                finalEvals = [];
+            }
+        }
+
+        // 3. Compute Basic Aggregates
+        const totalInvites = sessions.length;
+        let activeSessions = 0;
+        let completedSessions = 0;
+        let stalledSessions = 0;
+        let totalEngagedTime = 0;
+        const readinessDistribution: Record<'RL1' | 'RL2' | 'RL3' | 'RL4', number> = { RL1: 0, RL2: 0, RL3: 0, RL4: 0 };
+
+        sessions.forEach(s => {
+            const status = s.status;
+            const intake = (s.intake_json as SessionIntake) || {};
+
+            if (status === 'COMPLETED') completedSessions++;
+            else if (['IN_SESSION', 'AWAITING_EVALUATION', 'REVIEWING'].includes(status)) activeSessions++;
+
+            // Stalled: Viewed but no progress (assuming empty answers/questions if we had that, but let's use viewedAt)
+            if (intake.viewed_at && status === 'NOT_STARTED') stalledSessions++;
+
+            totalEngagedTime += (intake.engaged_time_seconds || 0);
+
+            if (s.readiness_band && (s.readiness_band in readinessDistribution)) {
+                readinessDistribution[s.readiness_band as keyof typeof readinessDistribution]++;
+            }
+        });
+
+        // 4. Compute Insights from Evals
+        const coachingFocusDistribution: Record<string, number> = {};
+        const observationCounts: Record<string, number> = {};
+
+        finalEvals?.forEach(e => {
+            const feedback = e.feedback_json as AnalysisResult;
+            if (feedback?.primaryFocus?.dimension) {
+                coachingFocusDistribution[feedback.primaryFocus.dimension] = (coachingFocusDistribution[feedback.primaryFocus.dimension] || 0) + 1;
+            }
+            feedback?.observations?.forEach(obs => {
+                observationCounts[obs] = (observationCounts[obs] || 0) + 1;
+            });
+        });
+
+        const commonObservations = Object.entries(observationCounts)
+            .map(([text, count]) => ({ text, count }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 5);
+
+        return {
+            totalInvites,
+            activeSessions,
+            completedSessions,
+            stalledSessions,
+            averageEngagementTimeSeconds: totalInvites > 0 ? totalEngagedTime / totalInvites : 0,
+            readinessDistribution,
+            coachingFocusDistribution,
+            commonObservations
+        };
     }
 
     async listByRecruiter(recruiterId: string): Promise<SessionSummary[]> {
@@ -75,6 +162,7 @@ export class SupabaseSessionRepository implements SessionRepository {
                 target_role,
                 status,
                 created_at,
+                updated_at,
                 intake_json,
                 parent_session_id,
                 attempt_number,
@@ -100,6 +188,7 @@ export class SupabaseSessionRepository implements SessionRepository {
                         target_role,
                         status,
                         created_at,
+                        updated_at,
                         intake_json,
                         parent_session_id,
                         attempt_number,
@@ -151,6 +240,7 @@ export class SupabaseSessionRepository implements SessionRepository {
                 role: s.target_role,
                 status: derivedStatus,
                 createdAt: new Date(s.created_at).getTime(),
+                updatedAt: new Date(s.updated_at).getTime(),
                 questionCount,
                 answerCount,
                 submittedCount,
@@ -273,6 +363,7 @@ export class SupabaseSessionRepository implements SessionRepository {
             candidateName,
             enteredInitials,
             viewedAt: intake.viewed_at,
+            updatedAt: sData.updated_at ? new Date(sData.updated_at).getTime() : undefined,
             candidate: {
                 firstName: c.firstName || "",
                 lastName: c.lastName || "",
@@ -293,9 +384,9 @@ export class SupabaseSessionRepository implements SessionRepository {
         const supabase = createAdminClient();
 
         // 1. Prepare Session Update
-        let dbStatus = session.status;
-        if (session.status === "AWAITING_EVALUATION" || session.status === "REVIEWING") {
-            dbStatus = "IN_SESSION";
+        let dbStatus = session.status as string;
+        if (session.status === "AWAITING_EVALUATION") {
+            dbStatus = "AWAITING_EVAL"; // Existing DB enum value
         }
 
         const updates: Record<string, unknown> = {
@@ -404,7 +495,11 @@ export class SupabaseSessionRepository implements SessionRepository {
         const dbUpdates: Record<string, unknown> = {};
 
         if (updates.status) {
-            dbUpdates.status = (['AWAITING_EVALUATION', 'REVIEWING'].includes(updates.status)) ? 'IN_SESSION' : updates.status;
+            if (updates.status === 'AWAITING_EVALUATION') {
+                dbUpdates.status = 'AWAITING_EVAL';
+            } else {
+                dbUpdates.status = updates.status;
+            }
         }
         if (updates.currentQuestionIndex !== undefined) dbUpdates.current_question_index = updates.currentQuestionIndex;
         if (updates.role) dbUpdates.target_role = updates.role;

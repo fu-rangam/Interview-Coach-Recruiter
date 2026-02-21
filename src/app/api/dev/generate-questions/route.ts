@@ -7,14 +7,16 @@ import { Logger } from "@/lib/logger";
 const apiKey = process.env.GEMINI_API_KEY;
 const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
+import { showDemoTools } from "@/lib/feature-flags";
+
 export async function POST(req: NextRequest) {
-    // Dev-only gate
-    if (process.env.NODE_ENV !== 'development') {
+    // Demo-mode gate (replaces hardcoded dev gate)
+    if (!showDemoTools()) {
         return NextResponse.json({ error: "Not available" }, { status: 404 });
     }
 
     try {
-        const { role, jobDescription } = await req.json();
+        const { role, jobDescription, resume } = await req.json();
 
         if (!role) {
             return NextResponse.json({ error: "Role is required" }, { status: 400 });
@@ -25,25 +27,78 @@ export async function POST(req: NextRequest) {
             return NextResponse.json(getMockQuestions(role));
         }
 
-        const prompt = `You are an expert HR interviewer designing interview questions for a "${role}" position.
-${jobDescription ? `Job Description: ${jobDescription}` : ''}
+        // --- Inclusive Logic Detection ---
+        const roleLower = role.toLowerCase();
+        const isEntryLevelOrBlueCollar =
+            roleLower.includes('warehouse') ||
+            roleLower.includes('associate') ||
+            roleLower.includes('clerk') ||
+            roleLower.includes('helper') ||
+            roleLower.includes('worker') ||
+            roleLower.includes('driver') ||
+            roleLower.includes('aide') ||
+            roleLower.includes('healthcare') ||
+            roleLower.includes('service') ||
+            roleLower.includes('food') ||
+            roleLower.includes('hospitality') ||
+            roleLower.includes('entry') ||
+            roleLower.includes('junior') ||
+            roleLower.includes('apprentice');
 
+        const isSeniorOrCorporate =
+            roleLower.includes('senior') ||
+            roleLower.includes('lead') ||
+            roleLower.includes('manager') ||
+            roleLower.includes('director') ||
+            roleLower.includes('vp') ||
+            roleLower.includes('head') ||
+            roleLower.includes('architect') ||
+            roleLower.includes('principal');
+
+        const prompt = `
+SYSTEM:
+You are a Lead Recruiter designing high-fidelity interview questions for a "${role}" position.
+Your goal is to create a realistic, inclusive, and role-appropriate interview set.
+
+${jobDescription ? `JOB DESCRIPTION:\n${jobDescription}\n` : ''}
+${resume ? `CANDIDATE RESUME:\n${resume}\n` : ''}
+
+PHASE 1: SIGNAL ANALYSIS (Internal Reasoning)
+1. Extract 3-4 core "Unspoken" requirements from the JD (e.g., physical stamina for warehouse, empathy for healthcare, or strategic influence for leaders).
+2. If a RESUME is provided, identify 2-3 specific background markers to anchor questions (e.g., previous experience in a similar industry).
+
+PHASE 2: COGNITIVE CALIBRATION
+${isEntryLevelOrBlueCollar ? `
+- ROLE TYPE: Entry-Level / Blue-Collar / Service.
+- READABILITY: STRICT 5th-Grade readability. Use plain phrasing, common terms, and short sentences.
+- FOCUS: Reliability, Teamwork, Safety, and Patient/Customer Care.
+- BEHAVIORAL STYLE: Use "Concrete Situational Scenarios" (e.g., "What would you do if...") instead of abstract "Tell me about a time..." questions.
+` : isSeniorOrCorporate ? `
+- ROLE TYPE: Senior / Corporate / Leadership.
+- READABILITY: Professional, concise, and strategic.
+- FOCUS: Rationale, Influence, Result-drive, and Strategic Trade-offs.
+- BEHAVIORAL STYLE: Focus on complexity, choice, and long-term impact.
+` : `
+- ROLE TYPE: Standard Professional.
+- READABILITY: Clear, professional 8th-grade level.
+- FOCUS: Competency mastery and role fit.
+`}
+
+PHASE 3: QUESTION GENERATION
 Generate interview questions in these categories:
 
-1. STAR Questions (Behavioral) - Generate exactly 4 questions, one for each STAR dimension:
-   - Situation: A question that asks the candidate to describe a relevant work situation
-   - Task: A question about responsibilities and tasks they handled
-   - Action: A question about specific actions they took
-   - Result: A question about outcomes and results they achieved
+1. Behavioral Questions - Generate exactly 4 questions.
+   - If Entry-Level/Blue-Collar: Focus on situational reliability and teamwork.
+   - If Senior: Focus on leadership, change management, and influence.
+   - Dimension Labels to use: Situation, Task, Action, Result (to map to the internal STAR schema).
 
-2. PERMA Questions (Culture/Fit) - Generate exactly 5 questions, one for each PERMA dimension:
-   - Positive Emotion: About maintaining positivity at work
-   - Engagement: About staying motivated and engaged
-   - Relationships: About building workplace relationships
-   - Meaning: About finding purpose in their work
-   - Accomplishment: About achievements and growth
+2. Culture/Fit Questions - Generate exactly 5 questions based on PERMA dimensions:
+   - Dimensions: Positive Emotion, Engagement, Relationships, Meaning, Accomplishment.
+   - Anchor these to the specific company environment implied in the JD.
 
-3. Technical Questions - Generate 1-2 questions specific to the role's technical requirements.
+3. Technical/Hard Skill Questions - Generate 1-2 questions.
+   - Anchor these to the actual tools or tasks mentioned in the JD.
+   - If a Resume is provided, tie the technical question to their stated tools/experience.
 
 OUTPUT FORMAT (strict JSON, no other text):
 {
@@ -66,9 +121,9 @@ OUTPUT FORMAT (strict JSON, no other text):
 }
 
 RULES:
-- Questions must be relevant to the specific role.
-- Questions should be open-ended and encourage storytelling.
-- Use clear, professional language appropriate for the role level.
+- Questions must be relevant to the specific role and candidates.
+- Use plain, supportive language for entry-level roles.
+- Do not mention the word "STAR" or "PERMA" in the question text.
 - Output ONLY valid JSON.`;
 
         const response = await ai.models.generateContent({

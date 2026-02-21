@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Search, ArrowUpDown, Copy, Trash2, CheckCircle2, ChevronDown, ChevronRight, History, ExternalLink } from "lucide-react";
+import { Search, ArrowUpDown, Copy, Trash2, CheckCircle2, ExternalLink } from "lucide-react";
 import { SessionSummary } from "@/lib/domain/types";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -17,7 +17,7 @@ interface RecruiterSessionsTableProps {
 }
 
 type SortConfig = {
-    key: keyof SessionSummary | 'created' | 'engagedTimeSeconds';
+    key: keyof SessionSummary | 'created' | 'updatedAt' | 'engagedTimeSeconds';
     direction: 'asc' | 'desc';
 } | null;
 
@@ -111,19 +111,8 @@ export function RecruiterSessionsTable({ initialSessions, recruiterTimezone }: R
     const [sortConfig, setSortConfig] = useState<SortConfig>(null);
     const [copiedId, setCopiedId] = useState<string | null>(null);
     const [isDeleting, setIsDeleting] = useState<string | null>(null);
-    const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
-    const toggleExpand = (id: string, e: React.MouseEvent) => {
-        e.stopPropagation();
-        setExpandedIds(prev => {
-            const next = new Set(prev);
-            if (next.has(id)) next.delete(id);
-            else next.add(id);
-            return next;
-        });
-    };
-
-    const handleSort = (key: keyof SessionSummary | 'created') => {
+    const handleSort = (key: keyof SessionSummary | 'created' | 'updatedAt') => {
         setSortConfig(prev => {
             if (prev?.key === key) {
                 return { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' };
@@ -239,6 +228,9 @@ export function RecruiterSessionsTable({ initialSessions, recruiterTimezone }: R
                 if (sortConfig.key === 'created') {
                     aVal = a.createdAt;
                     bVal = b.createdAt;
+                } else if (sortConfig.key === 'updatedAt') {
+                    aVal = a.updatedAt || a.createdAt;
+                    bVal = b.updatedAt || b.createdAt;
                 } else {
                     const key = sortConfig.key as keyof SessionSummary;
                     aVal = a[key] as string | number;
@@ -294,7 +286,7 @@ export function RecruiterSessionsTable({ initialSessions, recruiterTimezone }: R
                                     Status <ArrowUpDown className="w-3 h-3" />
                                 </button>
                             </TableHead>
-                            <TableHead>
+                            <TableHead className="bg-gradient-to-br from-[#e8f1fd] to-[#d1e3fa]">
                                 <button
                                     onClick={() => handleSort('readinessBand')}
                                     className="flex items-center gap-1 hover:text-slate-900 transition-colors uppercase text-[11px] font-bold tracking-wider text-slate-500"
@@ -308,6 +300,14 @@ export function RecruiterSessionsTable({ initialSessions, recruiterTimezone }: R
                                     className="flex items-center gap-1 hover:text-slate-900 transition-colors uppercase text-[11px] font-bold tracking-wider text-slate-500"
                                 >
                                     Active <ArrowUpDown className="w-3 h-3" />
+                                </button>
+                            </TableHead>
+                            <TableHead>
+                                <button
+                                    onClick={() => handleSort('updatedAt')}
+                                    className="flex items-center gap-1 hover:text-slate-900 transition-colors uppercase text-[11px] font-bold tracking-wider text-slate-500"
+                                >
+                                    Last Activity <ArrowUpDown className="w-3 h-3" />
                                 </button>
                             </TableHead>
                             <TableHead>
@@ -332,147 +332,84 @@ export function RecruiterSessionsTable({ initialSessions, recruiterTimezone }: R
                             </TableRow>
                         ) : (
                             filteredAndSortedSessions.map((session) => {
-                                const hasAttempts = session.attempts && session.attempts.length > 0;
-                                const isExpanded = expandedIds.has(session.id);
-
                                 return (
-                                    <React.Fragment key={session.id}>
-                                        <TableRow
-                                            className="group cursor-pointer hover:bg-blue-50/40 transition-colors border-b border-slate-100 last:border-0"
-                                            onClick={() => router.push(`/recruiter/sessions/${session.id}`)}
-                                        >
-                                            <TableCell className="font-semibold text-slate-900 py-4">
-                                                <div className="flex items-center gap-2">
-                                                    {hasAttempts && (
-                                                        <button
-                                                            onClick={(e) => toggleExpand(session.id, e)}
-                                                            className="p-1 hover:bg-slate-200 rounded transition-colors text-slate-400"
+                                    <TableRow
+                                        key={session.id}
+                                        className="group cursor-pointer hover:bg-blue-50/40 transition-colors border-b border-slate-100 last:border-0"
+                                        onClick={() => router.push(`/recruiter/sessions/${session.id}`)}
+                                    >
+                                        <TableCell className="font-semibold text-slate-900 py-4">
+                                            <div className="flex flex-col">
+                                                <div className="flex items-center gap-2 max-w-full">
+                                                    <span className="truncate">{session.candidateName}</span>
+                                                    {session.attemptNumber && session.attemptNumber > 1 && (
+                                                        <Badge
+                                                            variant="outline"
+                                                            className="text-[10px] py-0.5 px-1.5 bg-blue-50 border-blue-100 text-blue-600 whitespace-nowrap flex-shrink-0 font-bold uppercase tracking-tight"
                                                         >
-                                                            {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                                                        </button>
+                                                            Attempt {session.attemptNumber}
+                                                        </Badge>
                                                     )}
-                                                    <div className="flex flex-col">
-                                                        <div className="flex items-center gap-2 max-w-full">
-                                                            <span className="truncate">{session.candidateName}</span>
-                                                            {hasAttempts && (
-                                                                <Badge
-                                                                    variant="outline"
-                                                                    className="text-[10px] py-0.5 px-1.5 bg-slate-100 border-slate-200 text-slate-600 whitespace-nowrap flex-shrink-0"
-                                                                >
-                                                                    {session.attempts!.length + 1} Attempts
-                                                                </Badge>
-                                                            )}
-                                                        </div>
-                                                        {session.attemptNumber && session.attemptNumber > 1 && (
-                                                            <span className="text-[10px] font-bold text-blue-600 uppercase tracking-tight">
-                                                                Attempt #{session.attemptNumber}
-                                                            </span>
-                                                        )}
-                                                    </div>
                                                 </div>
-                                            </TableCell>
-                                            <TableCell className="text-slate-600">{session.role}</TableCell>
-                                            <TableCell>{getStatusBadge(session)}</TableCell>
-                                            <TableCell>{getReadinessBadge(session)}</TableCell>
-                                            <TableCell className="text-slate-500 whitespace-nowrap text-sm font-medium">
-                                                {formatDuration(session.engagedTimeSeconds)}
-                                            </TableCell>
-                                            <TableCell className="text-slate-500 whitespace-nowrap text-sm">
-                                                {formatTimestamp(session.createdAt)}
-                                            </TableCell>
-                                            <TableCell className="text-right px-6" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
-                                                <div className="flex items-center justify-end gap-1">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        asChild
-                                                        className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/5 transition-colors"
-                                                        title="Open Results in New Tab"
-                                                    >
-                                                        <Link href={`/recruiter/sessions/${session.id}`} target="_blank" rel="noopener noreferrer">
-                                                            <ExternalLink className="h-4 w-4" />
-                                                        </Link>
-                                                    </Button>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="text-slate-600">{session.role}</TableCell>
+                                        <TableCell>{getStatusBadge(session)}</TableCell>
+                                        <TableCell>{getReadinessBadge(session)}</TableCell>
+                                        <TableCell className="text-slate-500 whitespace-nowrap text-sm font-medium">
+                                            {formatDuration(session.engagedTimeSeconds)}
+                                        </TableCell>
+                                        <TableCell className="text-slate-500 whitespace-nowrap text-sm">
+                                            {formatTimestamp(session.updatedAt || session.createdAt)}
+                                        </TableCell>
+                                        <TableCell className="text-slate-500 whitespace-nowrap text-sm">
+                                            {formatTimestamp(session.createdAt)}
+                                        </TableCell>
+                                        <TableCell className="text-right px-6" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+                                            <div className="flex items-center justify-end gap-1">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    asChild
+                                                    className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/5 transition-colors"
+                                                    title="Open Results in New Tab"
+                                                >
+                                                    <Link href={`/recruiter/sessions/${session.id}`} target="_blank" rel="noopener noreferrer">
+                                                        <ExternalLink className="h-4 w-4" />
+                                                    </Link>
+                                                </Button>
 
-                                                    <div className="w-8 h-8 flex items-center justify-center">
-                                                        {session.inviteToken ? (
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                className="h-8 w-8 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors"
-                                                                title="Copy Invite Link"
-                                                                onClick={() => handleCopyLink(session.inviteToken!, session.id)}
-                                                            >
-                                                                {copiedId === session.id ? (
-                                                                    <CheckCircle2 className="h-4 w-4 text-emerald-600 animate-in zoom-in-50" />
-                                                                ) : (
-                                                                    <Copy className="h-4 w-4" />
-                                                                )}
-                                                            </Button>
-                                                        ) : null}
-                                                    </div>
-
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-8 w-8 text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                                                        title="Delete Session"
-                                                        disabled={isDeleting === session.id}
-                                                        onClick={() => handleDelete(session.id)}
-                                                    >
-                                                        <Trash2 className={isDeleting === session.id ? "h-4 w-4 animate-pulse" : "h-4 w-4"} />
-                                                    </Button>
-                                                </div>
-                                            </TableCell>
-                                        </TableRow>
-
-                                        {/* Nested Attempts */}
-                                        {isExpanded && session.attempts?.map((attempt) => (
-                                            <TableRow
-                                                key={attempt.id}
-                                                className="bg-slate-50/50 hover:bg-blue-50/30 transition-colors border-b border-slate-100 cursor-pointer"
-                                                onClick={() => router.push(`/recruiter/sessions/${attempt.id}`)}
-                                            >
-                                                <TableCell className="py-3 pl-10">
-                                                    <div className="flex items-center gap-2">
-                                                        <History className="w-3 h-3 text-slate-400" />
-                                                        <div className="flex flex-col">
-                                                            <span className="text-sm font-medium text-slate-700">Attempt #{attempt.attemptNumber}</span>
-                                                            <span className="text-[10px] text-slate-400">ID: {attempt.id.slice(0, 8)}...</span>
-                                                        </div>
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell className="text-slate-500 text-sm italic">Same as parent</TableCell>
-                                                <TableCell>{getStatusBadge(attempt)}</TableCell>
-                                                <TableCell>{getReadinessBadge(attempt)}</TableCell>
-                                                <TableCell className="text-slate-500 whitespace-nowrap text-sm">
-                                                    {formatDuration(attempt.engagedTimeSeconds)}
-                                                </TableCell>
-                                                <TableCell className="text-slate-500 whitespace-nowrap text-sm">
-                                                    {formatTimestamp(attempt.createdAt)}
-                                                </TableCell>
-                                                <TableCell className="text-right px-6" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
-                                                    <div className="flex items-center justify-end gap-1">
+                                                <div className="w-8 h-8 flex items-center justify-center">
+                                                    {session.inviteToken ? (
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
-                                                            asChild
-                                                            className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/5 transition-colors"
-                                                            title="Open Results in New Tab"
+                                                            className="h-8 w-8 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors"
+                                                            title="Copy Invite Link"
+                                                            onClick={() => handleCopyLink(session.inviteToken!, session.id)}
                                                         >
-                                                            <Link href={`/recruiter/sessions/${attempt.id}`} target="_blank" rel="noopener noreferrer">
-                                                                <ExternalLink className="h-4 w-4" />
-                                                            </Link>
+                                                            {copiedId === session.id ? (
+                                                                <CheckCircle2 className="h-4 w-4 text-emerald-600 animate-in zoom-in-50" />
+                                                            ) : (
+                                                                <Copy className="h-4 w-4" />
+                                                            )}
                                                         </Button>
+                                                    ) : null}
+                                                </div>
 
-                                                        {/* Placeholders to maintain alignment with parent actions */}
-                                                        <div className="w-8 h-8" />
-                                                        <div className="w-8 h-8" />
-                                                    </div>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </React.Fragment>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8 text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                                    title="Delete Session"
+                                                    disabled={isDeleting === session.id}
+                                                    onClick={() => handleDelete(session.id)}
+                                                >
+                                                    <Trash2 className={isDeleting === session.id ? "h-4 w-4 animate-pulse" : "h-4 w-4"} />
+                                                </Button>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
                                 );
                             })
                         )}

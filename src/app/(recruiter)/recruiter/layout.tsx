@@ -24,7 +24,7 @@ export default async function RecruiterLayout({
     if (user) {
         const { data } = await supabase
             .from('recruiter_profiles')
-            .select('first_name, last_name') // Minimal select
+            .select('first_name, last_name, title') // Minimal select
             .eq('recruiter_id', user.id)
             .single();
         profile = data;

@@ -3,6 +3,7 @@ create table if not exists recruiter_profiles (
   recruiter_id uuid primary key references auth.users(id) on delete cascade,
   first_name text null,
   last_name text null,
+  title text null,
   phone text null,
   timezone text null default 'UTC',
   created_at timestamptz not null default now(),

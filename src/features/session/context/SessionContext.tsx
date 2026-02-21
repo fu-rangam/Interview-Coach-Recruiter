@@ -54,7 +54,7 @@ export interface SessionContextType {
     clearDebugEvents: () => void;
     flushEngagement: () => void;
     recordEngagement: (deltaSeconds: number) => void;
-    createNewSession: (role: string, parentId?: string) => Promise<{ sessionId: string; candidateToken: string }>;
+    createNewSession: (role: string, parentId?: string) => Promise<{ sessionId: string; candidateToken: string } | null>;
 }
 
 export const SessionContext = createContext<SessionContextType | undefined>(undefined);
@@ -157,7 +157,10 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
 
     const createNewSession = async (role: string, parentId?: string) => {
         const result = await actions.init(role, parentId);
-        if (!result?.sessionId || !result?.candidateToken) throw new Error("Failed to create session");
+        if (!result?.sessionId || !result?.candidateToken) {
+            console.error("SessionContext: createNewSession failed - invalid result", result);
+            return null;
+        }
         // Update the local candidateToken state to match the new session
         setCandidateToken(result.candidateToken);
         return result as { sessionId: string; candidateToken: string };

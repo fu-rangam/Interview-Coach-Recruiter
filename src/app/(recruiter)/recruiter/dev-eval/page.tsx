@@ -5,12 +5,13 @@ import { DevEvalTable } from "./components/DevEvalTable";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { showDemoTools } from "@/lib/feature-flags";
 
 export const dynamic = 'force-dynamic';
 
 export default async function DevEvalPage() {
-    // Dev-only gate
-    if (process.env.NODE_ENV !== 'development') {
+    // Demo-mode gate
+    if (!showDemoTools()) {
         redirect("/recruiter");
     }
 

@@ -5,14 +5,15 @@ import { SessionEvalForm } from "../components/SessionEvalForm";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { showDemoTools } from "@/lib/feature-flags";
 
 const sessionRepo = new SupabaseSessionRepository();
 
 export const dynamic = 'force-dynamic';
 
 export default async function DevEvalDetailPage({ params }: { params: { id: string } }) {
-    // Dev-only gate
-    if (process.env.NODE_ENV !== 'development') {
+    // Demo-mode gate
+    if (!showDemoTools()) {
         redirect("/recruiter");
     }
 

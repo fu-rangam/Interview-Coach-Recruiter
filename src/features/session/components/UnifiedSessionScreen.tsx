@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
 import { audioEngine } from '@/features/audio/audio-engine';
 import { useSession } from '../context/SessionContext';
 import { useSmartHints } from '../hooks/useSmartHints';
@@ -31,7 +30,6 @@ import { CategoryTooltip } from './CategoryTooltip';
 import { EngagementDebugOverlay } from '@/components/debug/EngagementDebugOverlay';
 
 export default function UnifiedSessionScreen() {
-    const router = useRouter();
     const {
         session,
         saveAnswer,
@@ -43,7 +41,8 @@ export default function UnifiedSessionScreen() {
         engagementDebugEvents,
         engagementWindowTimeRemaining,
         clearDebugEvents,
-        flushEngagement
+        flushEngagement,
+        updateSession
     } = useSession();
 
     // Derived State from context
@@ -66,7 +65,6 @@ export default function UnifiedSessionScreen() {
 
     // Multistep Loader State
     const [showLoader, setShowLoader] = useState(false);
-    const [loaderComplete, setLoaderComplete] = useState(false);
 
     // Refs
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -90,7 +88,8 @@ export default function UnifiedSessionScreen() {
     const { data: strongResponseData, isLoading: isStrongResponseLoading, fetchStrongResponse } = useStrongResponse(
         currentQuestionId!,
         currentQuestion?.text ?? "",
-        hints
+        hints,
+        session?.role || "Product Manager"
     );
     const { transcript, resetTranscript, startListening, stopListening } = useSpeechToText();
     const {
@@ -116,17 +115,18 @@ export default function UnifiedSessionScreen() {
     useEffect(() => {
         if (isThinking) {
             setShowLoader(true);
-            setLoaderComplete(false);
             setIsDrawerOpen(false);
         }
     }, [isThinking]);
 
     useEffect(() => {
-        if (isReviewing && loaderComplete) {
+        // Recovery / Transition logic for Reviewing
+        if (isReviewing && analysis) {
+            // If we load into REVIEWING state with analysis, skip loader and open drawer
             setIsDrawerOpen(true);
             setShowLoader(false);
         }
-    }, [isReviewing, loaderComplete]);
+    }, [isReviewing, analysis]);
 
     // Mic Warm-up Optimization
     useEffect(() => {
@@ -255,7 +255,9 @@ export default function UnifiedSessionScreen() {
     const handleStop = async () => {
         if (window.confirm("Are you sure you want to stop? Your progress is saved.")) {
             trackEvent('tier2', 'session_stop_early');
-            router.push('/dashboard');
+            if (session?.id) {
+                await updateSession(session.id, { status: 'PAUSED' });
+            }
         }
     };
 
@@ -639,7 +641,7 @@ export default function UnifiedSessionScreen() {
             <MultiStepLoader
                 loading={showLoader}
                 duration={mode === 'voice' ? 2500 : 3000}
-                onComplete={() => setLoaderComplete(true)}
+                onComplete={() => { }}
                 loadingStates={
                     mode === 'voice'
                         ? [

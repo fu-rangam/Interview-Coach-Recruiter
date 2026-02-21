@@ -91,4 +91,34 @@ export const DEV_JOB_POOL = [
         role: "Social Media Marketing Associate",
         jd: "Create and schedule content across Instagram, LinkedIn, and TikTok. Monitor engagement metrics, assist with campaign planning, and collaborate with design team. 1-2 years social media experience, familiarity with Hootsuite or Sprout Social."
     },
+    {
+        reqId: "RCI-WH-12001-1",
+        role: "Warehouse Associate",
+        jd: "Responsible for receiving, labeling, and storing incoming shipments. Must be able to lift up to 50 lbs, operate a pallet jack, and maintain a clean workspace. Strong focus on safety and reliability. High school diploma or equivalent preferred."
+    },
+    {
+        reqId: "RCI-HC-22045-2",
+        role: "Personal Care Aide",
+        jd: "Assist elderly or disabled clients with daily activities, including personal hygiene, light housekeeping, and meal preparation. Must have reliable transportation, a compassionate attitude, and clear communication skills. Certification a plus but not required."
+    },
+    {
+        reqId: "RCI-AD-31090-3",
+        role: "Data Entry Clerk",
+        jd: "Accurately enter alphabetically and numerically information from source documents into our database. Strong typing skills (40+ WPM), attention to detail, and basic computer knowledge required. Reliable attendance is a must."
+    },
+    {
+        reqId: "RCI-FS-44501-1",
+        role: "Food Service Worker",
+        jd: "Prepare and serve meals in a fast-paced environment. Responsibilities include basic food prep, maintaining kitchen cleanliness, and providing friendly customer service. Ability to follow health and safety guidelines strictly."
+    },
+    {
+        reqId: "RCI-MF-51000-2",
+        role: "General Factory Laborer",
+        jd: "Operate machinery, assemble products on a production line, and perform quality checks. Must follow all safety protocols, work well in a team, and have the ability to stand for long shifts. No prior experience required; on-the-job training provided."
+    },
+    {
+        reqId: "RCI-HS-62015-4",
+        role: "Hospitality Housekeeper",
+        jd: "Clean and maintain guest rooms according to established standards. Includes changing linens, vacuuming, and stocking amenities. Eye for detail and reliability are key requirements for this role."
+    },
 ];

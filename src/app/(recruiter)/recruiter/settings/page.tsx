@@ -13,6 +13,7 @@ interface RecruiterProfile {
     recruiter_id: string;
     first_name: string;
     last_name: string;
+    title: string;
     phone: string;
     timezone: string;
 }
@@ -67,6 +68,7 @@ export default function SettingsPage() {
         recruiter_id: "",
         first_name: "",
         last_name: "",
+        title: "",
         phone: "",
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
     });
@@ -103,6 +105,7 @@ export default function SettingsPage() {
                     recruiter_id: user.id,
                     first_name: data.first_name || "",
                     last_name: data.last_name || "",
+                    title: data.title || "",
                     phone: data.phone || "",
                     timezone: data.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
                 };
@@ -117,6 +120,7 @@ export default function SettingsPage() {
                     recruiter_id: user.id,
                     first_name: "",
                     last_name: "",
+                    title: "",
                     phone: "",
                     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
                 };
@@ -153,6 +157,7 @@ export default function SettingsPage() {
                     recruiter_id: profile.recruiter_id,
                     first_name: profile.first_name,
                     last_name: profile.last_name,
+                    title: profile.title,
                     phone: profile.phone,
                     timezone: profile.timezone,
                     updated_at: new Date().toISOString()
@@ -221,6 +226,16 @@ export default function SettingsPage() {
                                 <span>{successMessage}</span>
                             </div>
                         )}
+
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-slate-700">Your Job Title</label>
+                            <input
+                                className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 focus:border-primary focus:ring-primary/20 transition-all"
+                                value={profile.title}
+                                onChange={e => setProfile({ ...profile, title: e.target.value })}
+                                placeholder="e.g. Senior Technical Recruiter"
+                            />
+                        </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">

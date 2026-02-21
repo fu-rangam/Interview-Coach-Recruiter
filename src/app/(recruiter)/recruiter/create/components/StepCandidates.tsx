@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2, ChevronRight, UserPlus } from "lucide-react";
 import { StepFooterProps } from "../constants";
+import { showDemoTools } from "@/lib/feature-flags";
 
 export interface CandidateRow {
     id: string;
@@ -29,7 +30,7 @@ export function StepCandidates({
     onRandomizeCandidate,
     StepFooter
 }: StepCandidatesProps) {
-    const isDev = process.env.NODE_ENV === 'development';
+    const isDemo = showDemoTools();
 
     const addCandidate = () => {
         setCandidates([
@@ -60,7 +61,7 @@ export function StepCandidates({
                     <h2 className="text-2xl font-bold font-display">Step 2: Add Candidates</h2>
                     <p className="text-muted-foreground">Enter the details for one or more candidates.</p>
                 </div>
-                {isDev && onRandomizeCandidate && (
+                {isDemo && onRandomizeCandidate && (
                     <button
                         onClick={onRandomizeCandidate}
                         className="px-3 py-1.5 text-xs font-medium rounded-full bg-violet-100 text-violet-700 hover:bg-violet-200 transition-colors border border-violet-200"

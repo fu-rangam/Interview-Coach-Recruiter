@@ -9,7 +9,8 @@ const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
 export class StrongResponseService {
     static async generateStrongResponse(
         questionText: string,
-        tips: QuestionTips
+        tips: QuestionTips,
+        role: string
     ): Promise<StrongResponseResult> {
 
         if (!ai) {
@@ -38,16 +39,42 @@ export class StrongResponseService {
         - Pro tip: "${tips.proTip}"
         `;
 
+        const roleTitle = role.toLowerCase();
+        const isSenior = roleTitle.includes('senior') || roleTitle.includes('lead') || roleTitle.includes('principal') || roleTitle.includes('manager') || roleTitle.includes('director') || roleTitle.includes('vp') || roleTitle.includes('head');
+        const isTechnical = roleTitle.includes('engineer') || roleTitle.includes('developer') || roleTitle.includes('architect') || roleTitle.includes('data');
+
+        let readingLevelContext = `
+        READING LEVEL:
+        - Keep language clear, professional, but accessible.
+        - Adopt a supportive, coaching tone.
+        `;
+
+        if (!isSenior && !isTechnical) {
+            readingLevelContext += `
+        - CRITICAL: This is an entry-level or non-technical role.
+        - Use simple, plain-spoken language (8th grade reading level).
+        - Avoid corporate jargon or complex abstract concepts.
+        - Keep sentences short and direct.
+        `;
+        } else if (isSenior) {
+            readingLevelContext += `
+        - Adapt tone for a senior candidate: professional, concise, and focusing on strategic impact.
+        `;
+        }
+
         const prompt = `
         You are an expert interview coach.
         Interview Question: "${questionText}".
+        Target Role: ${role}
         
         ${tipsContext}
+        ${readingLevelContext}
 
         Task:
-        1. GENERATE A STRONG RESPONSE: Create a hypothetical "Strong" (10/10) answer to this question. 
+        1. GENERATE A STRONG RESPONSE: Create a hypothetical "Strong" (10/10) answer to this question that a candidate for this SPECIFIC role would give.
            - It MUST explicitly follow the provided "Answer Framework" and "Points to Cover".
            - It should be natural, professional, and ~150-200 words.
+           - CRITICAL: It must strictly adhere to the READING LEVEL constraints above.
         2. GENERATE "WHY THIS WORKS": Explain why your generated strong response is effective by mapping it back to the specific categories in the coaching tips.
            - Fill out a structure IDENTICAL to the input tips, but the content should be your explanation of how the strong response meets that criteria.
 

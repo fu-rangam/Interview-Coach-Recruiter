@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button"
 import { RotateCcw } from "lucide-react"
 import { useSession } from "../context/SessionContext"
@@ -9,11 +10,19 @@ export default function SummaryScreen() {
     const { session, createNewSession } = useSession();
     const router = useRouter();
 
+    const [isCreating, setIsCreating] = useState(false);
+
     const handlePracticeAgain = async () => {
-        const role = session?.role || "Product Manager";
-        const result = await createNewSession(role, session?.id);
-        if (result?.candidateToken) {
-            router.push(`/s/${result.candidateToken}`);
+        if (isCreating) return;
+        setIsCreating(true);
+        try {
+            const role = session?.role || "Product Manager";
+            const result = await createNewSession(role, session?.id);
+            if (result?.candidateToken) {
+                router.push(`/s/${result.candidateToken}`);
+            }
+        } finally {
+            setIsCreating(false);
         }
     };
 
@@ -48,7 +57,7 @@ export default function SummaryScreen() {
                             Session Complete!
                         </h1>
                         <p className="text-lg md:text-xl text-muted-foreground/80 max-w-md mx-auto leading-relaxed">
-                            Great job practicing. Your personalized feedback is ready for review in your recruiter dashboard.
+                            Great job practicing. Your talent specialist will review your responses and provide feedback.
                         </p>
                     </motion.div>
                 </div>

@@ -35,6 +35,7 @@ export default function SessionOrchestrator() {
     // Render Logic
     if (isLoading && !session) return <LoadingScreen />; // Initial load
     if (now.status === "ERROR") return <ErrorScreen />;
+    if (now.status === "GENERATING_QUESTIONS") return <LoadingScreen />; // Handle generation state
     if (now.status === "PAUSED") return <SessionSavedScreen />;
     if (now.requiresInitials) return <InitialsScreen />;
 
@@ -55,5 +56,9 @@ export default function SessionOrchestrator() {
 
     if (now.status === "COMPLETED") return <SummaryScreen />;
 
+    // Transitional Fallback (Avoid flashing ERROR during rehydration/navigation)
+    if (isLoading || !session) return <LoadingScreen />;
+
+    console.warn(`[Orchestrator] Fallthrough on Status: ${now.status}, Screen: ${now.screen}`);
     return <ErrorScreen />;
 }

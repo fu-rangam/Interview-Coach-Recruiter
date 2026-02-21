@@ -13,6 +13,7 @@ export function useSessionMutations(
 ) {
     const now = useMemo(() => selectNow(session), [session]);
     const isBusyRef = useRef(false);
+    const activeInitPromiseRef = useRef<Promise<{ sessionId: string; candidateToken: string } | undefined> | null>(null);
 
     /**
      * Merges a new session object with the current local state, 
@@ -29,25 +30,30 @@ export function useSessionMutations(
     }, [setSession]);
 
     const init = useCallback(async (role: string, parentId?: string) => {
-        if (isBusyRef.current) return;
-        isBusyRef.current = true;
-        try {
-            const { data: newSession, headers } = await ApiClient.postWithHeaders<InterviewSession>(
-                '/api/session/start',
-                { role, parentId },
-                { schema: InterviewSessionSchema }
-            );
-            setSession(newSession);
-            localStorage.setItem(STORAGE_KEYS.CURRENT_SESSION_ID, newSession.id);
+        if (activeInitPromiseRef.current) return activeInitPromiseRef.current;
 
-            const newToken = headers.get('x-candidate-token');
-            return { sessionId: newSession.id, candidateToken: newToken };
-        } catch (e) {
-            Logger.error("Session Init Failed", e);
-            throw e;
-        } finally {
-            isBusyRef.current = false;
-        }
+        const promise = (async () => {
+            try {
+                const { data: newSession, headers } = await ApiClient.postWithHeaders<InterviewSession>(
+                    '/api/session/start',
+                    { role, parentId },
+                    { schema: InterviewSessionSchema }
+                );
+                setSession(newSession);
+                localStorage.setItem(STORAGE_KEYS.CURRENT_SESSION_ID, newSession.id);
+
+                const newToken = headers.get('x-candidate-token');
+                return { sessionId: newSession.id, candidateToken: newToken ? newToken : '' };
+            } catch (e) {
+                Logger.error("Session Init Failed", e);
+                throw e;
+            } finally {
+                activeInitPromiseRef.current = null;
+            }
+        })();
+
+        activeInitPromiseRef.current = promise;
+        return promise;
     }, [setSession]);
 
     const start = useCallback(async () => {

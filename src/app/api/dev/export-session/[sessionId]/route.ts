@@ -9,14 +9,16 @@ import {
     ExportQuestionPayload,
 } from "@/app/(recruiter)/recruiter/dev-eval/types";
 
+import { showDemoTools } from "@/lib/feature-flags";
+
 const sessionRepo = new SupabaseSessionRepository();
 
 export async function GET(
     req: NextRequest,
     { params }: { params: { sessionId: string } }
 ) {
-    // Dev-only gate
-    if (process.env.NODE_ENV !== 'development') {
+    // Demo-mode gate (replaces hardcoded dev gate)
+    if (!showDemoTools()) {
         return NextResponse.json({ error: "Not available" }, { status: 404 });
     }
 

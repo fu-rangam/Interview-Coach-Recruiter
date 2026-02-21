@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2, Loader2 } from "lucide-react";
 import { QuestionInput, StepFooterProps } from "../constants";
+import { showDemoTools } from "@/lib/feature-flags";
 
 interface StepQuestionsProps {
     star: QuestionInput[];
@@ -28,7 +29,7 @@ export function StepQuestions({
     isGeneratingQuestions,
     StepFooter
 }: StepQuestionsProps) {
-    const isDev = process.env.NODE_ENV === 'development';
+    const isDemo = showDemoTools();
 
     const addTechnical = () => {
         setTechnical([...technical, {
@@ -52,8 +53,8 @@ export function StepQuestions({
             <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold font-display">Step 2: Configure Questions</h2>
                 <div className="flex items-center gap-2">
-                    {/* Dev AI Generate Button */}
-                    {isDev && onGenerateQuestionsAI && (
+                    {/* Demo AI Generate Button */}
+                    {isDemo && onGenerateQuestionsAI && (
                         <button
                             onClick={onGenerateQuestionsAI}
                             disabled={isGeneratingQuestions}

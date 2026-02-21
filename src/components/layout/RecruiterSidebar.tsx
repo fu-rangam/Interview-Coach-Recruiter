@@ -11,7 +11,7 @@ import { LogoutButton } from '@/components/auth/LogoutButton';
 interface RecruiterProfile {
     first_name: string;
     last_name: string;
-    // other fields if needed for sidebar? Phone/Timezone not needed here.
+    title?: string;
 }
 
 interface RecruiterSidebarProps {
@@ -62,8 +62,8 @@ export function RecruiterSidebar({ className, onNavigate, user, profile }: Recru
                 </Link>
 
                 <div className="mb-6 pb-6 border-b">
-                    <div className="text-sm font-semibold text-muted-foreground uppercase tracking-widest mb-1">
-                        Recruiter
+                    <div className="text-sm font-semibold text-muted-foreground uppercase tracking-widest mb-1 truncate" title={profile?.title || "Recruiter"}>
+                        {profile?.title || "Recruiter"}
                     </div>
                     <div className="font-medium text-lg text-foreground truncate font-display" title={displayName}>
                         {displayName}

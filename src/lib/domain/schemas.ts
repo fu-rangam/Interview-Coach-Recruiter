@@ -211,8 +211,9 @@ export const GenerateTipsSchema = z.object({
 });
 
 export const GenerateStrongResponseSchema = z.object({
-    question: z.string().min(1, 'Question is required'),
-    tips: QuestionTipsSchema,
+    question: z.string(),
+    tips: z.any(), // QuestionTips
+    role: z.string().optional()
 });
 
 export const GenerateBlueprintSchema = z.object({

@@ -45,7 +45,7 @@ export default function Home() {
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
-                        transition={{ delay: 1.0, duration: 0.8 }}
+                        transition={{ delay: 2.8, duration: 0.8 }}
                         className="flex flex-row items-center justify-center gap-[0.4rem] text-lg md:text-xl text-muted-foreground/80 font-medium tracking-wide whitespace-nowrap"
                     >
                         <span className="uppercase text-[10px] sm:text-xs md:text-base tracking-[0.1em] opacity-80 translate-y-[1px]">
@@ -66,10 +66,10 @@ export default function Home() {
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 3.0, duration: 0.8, ease: "easeOut" }}
+                    transition={{ delay: 2.8, duration: 0.8, ease: "easeOut" }}
                     className="w-full max-w-sm space-y-8"
                 >
-                    <Link href="/recruiter" className="w-full block">
+                    <Link href="/recruiter/create" className="w-full block">
                         <Button className="w-full h-14 text-lg rounded-full shadow-lg shadow-blue-900/20 hover:shadow-blue-900/40 hover:-translate-y-0.5 transition-all" size="lg">
                             Continue as Recruiter
                         </Button>
